@@ -50,12 +50,12 @@ class CycleDetector {
 private:
     int vertices;
     List<int>** adjLists;
-    bool isCyclicUtil(int v, bool visited[], bool *recStack);
+    bool isCyclicUtil(int v, bool* visited, bool *recStack);
 
 public:
     CycleDetector(int vertices);
     void addEdge(int v, int w);
-    bool isCyclic();
+    int detectCycle(); // return the index of vertex in cycle, or -1 if acyclic
 };
 
 

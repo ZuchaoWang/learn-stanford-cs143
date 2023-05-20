@@ -288,7 +288,7 @@ void ClassTable::check_unique_class() {
     for (cl2 = classInfos; cl2 != cl1; cl2 = cl2->tl()) {
       ci2 = cl2->hd();
       if (ci1->name == ci2->name) {
-        semant_error(ci2->class_);
+        semant_error(ci2->class_)<<"class name duplicated: "<<ci1->name->get_string()<<std::endl;
       }
     }
   }
@@ -306,7 +306,7 @@ void ClassTable::check_unique_attr() {
       for (al2 = ci->attrInfos; al2 != al1; al2 = al2->tl()) {
         ai2 = al2->hd();
         if (ai1->name == ai2->name) {
-          semant_error(ci->class_);
+          semant_error(ci->class_)<<"class "<<ci->name->get_string()<<" has duplicated attributes: "<<ai1->name->get_string()<<std::endl;
         }
       }
     }
@@ -325,7 +325,7 @@ void ClassTable::check_unique_method() {
       for (ml2 = ci->methodInfos; ml2 != ml1; ml2 = ml2->tl()) {
         mi2 = ml2->hd();
         if (mi1->name == mi2->name) {
-          semant_error(ci->class_);
+          semant_error(ci->class_)<<"class "<<ci->name->get_string()<<" has duplicated methods: "<<mi1->name->get_string()<<std::endl;
         }
       }
     }
@@ -348,7 +348,7 @@ void ClassTable::check_unique_formal() {
         for (al2 = mi->argInfos; al2 != al1; al2 = al2->tl()) {
           ai2 = al2->hd();
           if (ai1->name == ai2->name) {
-            semant_error(ci->class_);
+            semant_error(ci->class_)<<"class "<<ci->name->get_string()<<"'s method " <<mi->name->get_string()<<" has duplicated formals: "<<ai1->name->get_string()<<std::endl;
           }
         }
       }
@@ -375,7 +375,7 @@ void ClassTable::check_class_parent_exist() {
         }
       }
       if (found == false) {
-        semant_error(ci1->class_);
+        semant_error(ci1->class_)<<"class "<<ci1->name->get_string()<<"'s parent "<<ci1->parent->get_string()<<" does not exist"<<std::endl;
       }
     }
   }
@@ -404,12 +404,15 @@ void ClassTable::check_class_acyclic() {
     assert(index2 < vn);
     cd.addEdge(index2, index1);
   }
-  if (cd.isCyclic()) {
-    semant_error();
+  int indexc = cd.detectCycle();
+  if (indexc > -1) {
+    List<ClassInfo>* clc = classInfos;
+    for(int i=0; i<indexc; i++) clc = clc->tl();
+    semant_error()<<"class inheritance cycle detected at: "<<clc->hd()->name<<std::endl;
   }
 }
 
-bool CycleDetector::isCyclicUtil(int v, bool visited[], bool *recStack)
+bool CycleDetector::isCyclicUtil(int v, bool* visited, bool *recStack)
 {
   visited[v] = true;
   recStack[v] = true;
@@ -448,7 +451,7 @@ void CycleDetector::addEdge(int v, int w)
   adjLists[v] = new List<int>(ptr, adjLists[v]);
 }
 
-bool CycleDetector::isCyclic()
+int CycleDetector::detectCycle()
 {
   bool *visited = new bool[vertices];
   bool *recStack = new bool[vertices];
@@ -463,11 +466,11 @@ bool CycleDetector::isCyclic()
   {
     if (isCyclicUtil(i, visited, recStack))
     {
-      return true;
+      return i;
     }
   }
 
-  return false;
+  return -1;
 }
 
 /*   This is the entry point to the semantic checker.
@@ -488,15 +491,11 @@ void program_class::semant()
     initialize_constants();
 
     /* ClassTable constructor may do some semantic analysis */
-    std::cout<<"1"<<std::endl;
     ClassTable *classtable = new ClassTable(classes);
 
     /* some semantic analysis code may go here */
-    std::cout<<"2"<<std::endl;
     classtable->check_unique_var();
-    std::cout<<"3"<<std::endl;
     classtable->check_class_hierarchy();
-    std::cout<<"4"<<std::endl;
     if (classtable->errors()) {
       cerr << "Compilation halted due to static semantic errors." << endl;
       exit(1);
