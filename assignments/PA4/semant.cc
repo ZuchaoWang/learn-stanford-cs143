@@ -241,26 +241,6 @@ void formal_class::register_class_info(ClassInfo *info)
   info->methodInfos->hd()->argInfos = new List<AttrInfo>(attrInfo, info->methodInfos->hd()->argInfos);
 }
 
-ClassInfo *ClassTable::find_class_info_by_name_symbol(Symbol name)
-{
-  return find_class_info_by_name_symbol(name, NULL);
-}
-
-AttrInfo *ClassTable::find_attr_info_by_name_symbol(ClassInfo *classinfo, Symbol name)
-{
-  return find_attr_info_by_name_symbol(classinfo, name, NULL);
-}
-
-MethodInfo *ClassTable::find_method_info_by_name_symbol(ClassInfo *classinfo, Symbol name)
-{
-  return find_method_info_by_name_symbol(classinfo, name, NULL);
-}
-
-AttrInfo *ClassTable::find_arg_info_by_name_symbol(MethodInfo *methodinfo, Symbol name)
-{
-  return find_arg_info_by_name_symbol(methodinfo, name, NULL);
-}
-
 ClassInfo *ClassTable::find_class_info_by_name_symbol(Symbol name, List<ClassInfo> *until)
 {
   List<ClassInfo> *cl;
@@ -306,7 +286,7 @@ MethodInfo *ClassTable::find_method_info_by_name_symbol(ClassInfo *classinfo, Sy
   return NULL;
 }
 
-AttrInfo *ClassTable::find_arg_info_by_name_symbol(MethodInfo *methodinfo, Symbol name, List<AttrInfo>* until)
+AttrInfo *ClassTable::find_arg_info_by_name_symbol(MethodInfo *methodinfo, Symbol name, List<AttrInfo> *until)
 {
   List<AttrInfo> *al;
   AttrInfo *ai;
@@ -319,6 +299,78 @@ AttrInfo *ClassTable::find_arg_info_by_name_symbol(MethodInfo *methodinfo, Symbo
     }
   }
   return NULL;
+}
+
+ClassInfo *ClassTable::find_class_info_by_name_symbol(Symbol name)
+{
+  return find_class_info_by_name_symbol(name, NULL);
+}
+
+AttrInfo *ClassTable::find_attr_info_by_name_symbol(ClassInfo *classinfo, Symbol name)
+{
+  return find_attr_info_by_name_symbol(classinfo, name, NULL);
+}
+
+MethodInfo *ClassTable::find_method_info_by_name_symbol(ClassInfo *classinfo, Symbol name)
+{
+  return find_method_info_by_name_symbol(classinfo, name, NULL);
+}
+
+AttrInfo *ClassTable::find_arg_info_by_name_symbol(MethodInfo *methodinfo, Symbol name)
+{
+  return find_arg_info_by_name_symbol(methodinfo, name, NULL);
+}
+
+AttrInfo *ClassTable::recfind_attr_info_by_name_symbol(ClassInfo *classinfo, Symbol name)
+{
+  assert(classinfo->name != No_class);
+  AttrInfo *attrinfo = find_attr_info_by_name_symbol(classinfo, name);
+  if (attrinfo != NULL)
+  {
+    return attrinfo;
+  }
+  else
+  {
+    if (classinfo->parent == No_class)
+    {
+      return NULL;
+    }
+    else
+    {
+      ClassInfo *parentclassinfo = find_class_info_by_name_symbol(classinfo->parent);
+      if (parentclassinfo == NULL)
+      {
+        assert(parentclassinfo != NULL);
+      };
+      return find_attr_info_by_name_symbol(parentclassinfo, name);
+    }
+  }
+}
+
+MethodInfo *ClassTable::recfind_method_info_by_name_symbol(ClassInfo *classinfo, Symbol name)
+{
+  assert(classinfo->name != No_class);
+  MethodInfo *methodinfo = find_method_info_by_name_symbol(classinfo, name);
+  if (methodinfo != NULL)
+  {
+    return methodinfo;
+  }
+  else
+  {
+    if (classinfo->parent == No_class)
+    {
+      return NULL;
+    }
+    else
+    {
+      ClassInfo *parentclassinfo = find_class_info_by_name_symbol(classinfo->parent);
+      if (parentclassinfo == NULL)
+      {
+        assert(parentclassinfo != NULL);
+      };
+      return find_method_info_by_name_symbol(parentclassinfo, name);
+    }
+  }
 }
 
 void ClassTable::check_unique_var()
@@ -363,7 +415,8 @@ void ClassTable::check_unique_attr()
     {
       ai = al->hd();
       aidup = find_attr_info_by_name_symbol(ci, ai->name, al);
-      if (aidup != NULL) {
+      if (aidup != NULL)
+      {
         semant_error(ci->class_) << "class " << ci->name->get_string() << " has duplicated attributes: " << ai->name->get_string() << std::endl;
       }
     }
@@ -541,8 +594,68 @@ int CycleDetector::detectCycle()
 
 /* code to check types */
 
-void ClassTable::check_type()
+void ClassTable::check_type_hierarchy()
 {
+  List<ClassInfo> *cl;
+  ClassInfo *ci, *ciparent;
+  List<AttrInfo> *al;
+  AttrInfo *ai, *aiparent;
+  List<MethodInfo> *ml;
+  MethodInfo *mi, *miparent;
+  for (cl = classInfos; cl != NULL; cl = cl->tl())
+  {
+    ci = cl->hd();
+    ciparent = find_class_info_by_name_symbol(ci->parent);
+    if (ciparent != NULL) // NULL if parent is No_class
+    {
+      assert(ciparent != ci);
+
+      // check attr
+      for (al = ci->attrInfos; al != NULL; al = al->tl())
+      {
+        ai = al->hd();                                                   // self attrinfo
+        aiparent = recfind_attr_info_by_name_symbol(ciparent, ai->name); // parent attrinfo
+        if (aiparent != NULL && check_attr_info_consistency(ai, aiparent) == false)
+        {
+          semant_error(ci->class_) << "class " << ci->name->get_string() << " has inconsistent attribute: " << ai->name->get_string() << std::endl;
+        }
+      }
+
+      // check method
+      for (ml = ci->methodInfos; ml != NULL; ml = ml->tl())
+      {
+        mi = ml->hd();                                                     // self methodinfo
+        miparent = recfind_method_info_by_name_symbol(ciparent, mi->name); // parent methodinfo
+        if (miparent != NULL && check_method_info_consistency(mi, miparent) == false)
+        {
+          semant_error(ci->class_) << "class " << ci->name->get_string() << " has inconsistent method: " << mi->name->get_string() << std::endl;
+        }
+      }
+    }
+  }
+}
+
+bool check_attr_info_consistency(AttrInfo *attrinfo1, AttrInfo *attrinfo2)
+{
+  return attrinfo1->name == attrinfo2->name && attrinfo1->type == attrinfo2->type;
+}
+
+bool check_method_info_consistency(MethodInfo *methodinfo1, MethodInfo *methodinfo2)
+{
+  if (methodinfo1->name != methodinfo2->name)
+    return false;
+  if (methodinfo1->retType != methodinfo2->retType)
+    return false;
+  if (list_length(methodinfo1->argInfos) != list_length(methodinfo2->argInfos))
+    return false;
+  for (List<AttrInfo> *argInfoTail1 = methodinfo1->argInfos, *argInfoTail2 = methodinfo2->argInfos;
+       argInfoTail1 != NULL && argInfoTail2 != NULL;
+       argInfoTail1 = argInfoTail1->tl(), argInfoTail2 = argInfoTail2->tl())
+  {
+    if (check_attr_info_consistency(argInfoTail1->hd(), argInfoTail2->hd()) == false)
+      return false;
+  }
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -607,7 +720,7 @@ void program_class::semant()
   }
 
   /* semantic analysis on types */
-  classtable->check_type();
+  classtable->check_type_hierarchy();
   if (classtable->errors())
   {
     cerr << "Compilation halted due to static semantic errors." << endl;
