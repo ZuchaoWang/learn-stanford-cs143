@@ -44,6 +44,46 @@ typedef Expressions_class *Expressions;
 typedef list_node<Case> Cases_class;
 typedef Cases_class *Cases;
 
+
+class AttrInfo {
+public:
+  Symbol name;
+  Symbol type;
+  AttrInfo() {
+    name = NULL;
+    type = NULL;
+  }
+};
+
+class MethodInfo {
+public:
+  Symbol name;
+  List<AttrInfo>* argInfos;
+  Symbol retType;
+  MethodInfo() {
+    name = NULL;
+    argInfos = NULL;
+    retType = NULL;
+  }
+};
+
+class ClassInfo {
+public:
+  Class_ class_;
+  Symbol name;
+  Symbol parent;
+  List<AttrInfo> *attrInfos;
+  List<MethodInfo> *methodInfos;
+  ClassInfo() {
+    class_ = NULL;
+    name = NULL;
+    parent = NULL;
+    attrInfos = NULL;
+    methodInfos = NULL;
+  }
+};
+
+
 #define Program_EXTRAS                          \
 virtual void semant() = 0;			\
 virtual void dump_with_types(ostream&, int) = 0; 
@@ -56,31 +96,35 @@ void dump_with_types(ostream&, int);
 
 #define Class__EXTRAS                   \
 virtual Symbol get_filename() = 0;      \
-virtual void dump_with_types(ostream&,int) = 0; 
+virtual void dump_with_types(ostream&,int) = 0;  \
+virtual void register_class_info(ClassInfo* info) = 0;
 
 
 #define class__EXTRAS                                 \
 Symbol get_filename() { return filename; }             \
-void dump_with_types(ostream&,int);                    
+void dump_with_types(ostream&,int);                     \
+virtual void register_class_info(ClassInfo* info);
 
 
 #define Feature_EXTRAS                                        \
-virtual void dump_with_types(ostream&,int) = 0; 
+virtual void dump_with_types(ostream&,int) = 0;                \
+virtual void register_class_info(ClassInfo* info) = 0;
 
 
 #define Feature_SHARED_EXTRAS                                       \
-void dump_with_types(ostream&,int);    
-
-
+void dump_with_types(ostream&,int);                                  \
+virtual void register_class_info(ClassInfo* info);
 
 
 
 #define Formal_EXTRAS                              \
-virtual void dump_with_types(ostream&,int) = 0;
+virtual void dump_with_types(ostream&,int) = 0;    \
+virtual void register_class_info(ClassInfo* info) = 0;
 
 
 #define formal_EXTRAS                           \
-void dump_with_types(ostream&,int);
+void dump_with_types(ostream&,int);             \
+virtual void register_class_info(ClassInfo* info);
 
 
 #define Case_EXTRAS                             \
