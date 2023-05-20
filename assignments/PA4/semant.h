@@ -27,6 +27,16 @@ private:
   ostream& error_stream;
   List<ClassInfo> *classInfos;
 
+  ClassInfo* find_class_info_by_name_symbol(Symbol name);
+  AttrInfo* find_attr_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
+  MethodInfo* find_method_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
+  AttrInfo* find_arg_info_by_name_symbol(MethodInfo* methodinfo, Symbol name);
+
+  ClassInfo* find_class_info_by_name_symbol(Symbol name, List<ClassInfo>* until);
+  AttrInfo* find_attr_info_by_name_symbol(ClassInfo* classinfo, Symbol name, List<AttrInfo>* until);
+  MethodInfo* find_method_info_by_name_symbol(ClassInfo* classinfo, Symbol name, List<MethodInfo>* until);
+  AttrInfo* find_arg_info_by_name_symbol(MethodInfo* methodinfo, Symbol name, List<AttrInfo>* until);
+
   void check_unique_class();
   void check_unique_attr();
   void check_unique_method();
@@ -44,6 +54,7 @@ public:
 
   void check_unique_var();
   void check_class_hierarchy();
+  void check_type();
 };
 
 class CycleDetector {
