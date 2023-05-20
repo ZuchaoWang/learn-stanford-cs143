@@ -48,6 +48,8 @@ private:
   void check_class_parent_exist();
   void check_class_acyclic();
 
+  SymbolTable<Symbol,Entry>* build_class_symtab(ClassInfo* classinfo); /* attr only, since method is immutable */
+
 public:
   ClassTable(Classes);
   int errors() { return semant_errors; }
@@ -58,6 +60,7 @@ public:
   void check_unique_var(); /* name of class, attr, method, formals must be unique */
   void check_class_hierarchy(); /* parent must be defined, and no cycle */
   void check_type_hierarchy(); /* child redefinition of attr and method must be consistent with parent */
+  void check_type_expression(); /* attr initializer and method body must be type consistent */
 };
 
 class CycleDetector {
@@ -74,6 +77,7 @@ public:
 
 bool check_attr_info_consistency(AttrInfo* attrinfo1, AttrInfo* attrinfo2);
 bool check_method_info_consistency(MethodInfo* methodinfo1, MethodInfo* methodinfo2);
+void add_attr_infos_to_symtab(List<AttrInfo> *attrinfos, SymbolTable<Symbol, Entry> *map);
 
 #endif
 

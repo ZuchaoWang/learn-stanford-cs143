@@ -658,6 +658,45 @@ bool check_method_info_consistency(MethodInfo *methodinfo1, MethodInfo *methodin
   return true;
 }
 
+void ClassTable::check_type_expression()
+{
+  List<ClassInfo> *cl;
+  ClassInfo *ci;
+  for (cl = classInfos; cl != NULL; cl = cl->tl())
+  {
+    ci = cl->hd();
+  }
+}
+
+SymbolTable<Symbol, Entry> *ClassTable::build_class_symtab(ClassInfo *classinfo)
+{
+  SymbolTable<Symbol, Entry> *map = new SymbolTable<Symbol, Entry>();
+  map->enterscope();
+  // add attr info from current class to parent to No_class
+  // add only if not already added to avoid duplicate
+  // order actually does not matter due to attr consistency
+  assert(classinfo->name != No_class);
+  for (ClassInfo *ci = classinfo; ci->parent != No_class; ci = find_class_info_by_name_symbol(ci->parent))
+  {
+    add_attr_infos_to_symtab(ci->attrInfos, map);
+  }
+  return map;
+}
+
+void add_attr_infos_to_symtab(List<AttrInfo> *attrinfos, SymbolTable<Symbol, Entry> *map)
+{
+  List<AttrInfo> *al;
+  AttrInfo *ai;
+  for (al = attrinfos; al != NULL; al = al->tl())
+  {
+    ai = al->hd();
+    if (map->probe(ai->name) == NULL)
+    {
+      map->addid(ai->name, ai->type);
+    }
+  }
+}
+
 ////////////////////////////////////////////////////////////////////
 //
 // semant_error is an overloaded function for reporting errors
@@ -721,6 +760,7 @@ void program_class::semant()
 
   /* semantic analysis on types */
   classtable->check_type_hierarchy();
+  classtable->check_type_expression();
   if (classtable->errors())
   {
     cerr << "Compilation halted due to static semantic errors." << endl;
