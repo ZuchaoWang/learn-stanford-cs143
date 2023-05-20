@@ -44,12 +44,26 @@ typedef Expressions_class *Expressions;
 typedef list_node<Case> Cases_class;
 typedef Cases_class *Cases;
 
+class method_class;
+class attr_class;
 
 class AttrInfo {
 public:
   Symbol name;
   Symbol type;
+  attr_class* attr;
   AttrInfo() {
+    name = NULL;
+    type = NULL;
+    attr = NULL;
+  }
+};
+
+class FormalInfo {
+public:
+  Symbol name;
+  Symbol type;
+  FormalInfo() {
     name = NULL;
     type = NULL;
   }
@@ -58,12 +72,14 @@ public:
 class MethodInfo {
 public:
   Symbol name;
-  List<AttrInfo>* argInfos;
+  List<FormalInfo>* formalInfos;
   Symbol retType;
+  method_class* method;
   MethodInfo() {
     name = NULL;
-    argInfos = NULL;
+    formalInfos = NULL;
     retType = NULL;
+    method = NULL;
   }
 };
 

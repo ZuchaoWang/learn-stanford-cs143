@@ -30,12 +30,12 @@ private:
   ClassInfo* find_class_info_by_name_symbol(Symbol name, List<ClassInfo>* until);
   AttrInfo* find_attr_info_by_name_symbol(ClassInfo* classinfo, Symbol name, List<AttrInfo>* until);
   MethodInfo* find_method_info_by_name_symbol(ClassInfo* classinfo, Symbol name, List<MethodInfo>* until);
-  AttrInfo* find_arg_info_by_name_symbol(MethodInfo* methodinfo, Symbol name, List<AttrInfo>* until);
+  FormalInfo* find_formal_info_by_name_symbol(MethodInfo* methodinfo, Symbol name, List<FormalInfo>* until);
 
   ClassInfo* find_class_info_by_name_symbol(Symbol name);
   AttrInfo* find_attr_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
   MethodInfo* find_method_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
-  AttrInfo* find_arg_info_by_name_symbol(MethodInfo* methodinfo, Symbol name);
+  FormalInfo* find_formal_info_by_name_symbol(MethodInfo* methodinfo, Symbol name);
 
   AttrInfo* recfind_attr_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
   MethodInfo* recfind_method_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
@@ -49,6 +49,8 @@ private:
   void check_class_acyclic();
 
   SymbolTable<Symbol,Entry>* build_class_symtab(ClassInfo* classinfo); /* attr only, since method is immutable */
+  void check_type_expression_in_attr(AttrInfo* attrinfo, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* map);
+  void check_type_expression_in_method(MethodInfo* methodinfo, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* map);
 
 public:
   ClassTable(Classes);
@@ -77,6 +79,7 @@ public:
 
 bool check_attr_info_consistency(AttrInfo* attrinfo1, AttrInfo* attrinfo2);
 bool check_method_info_consistency(MethodInfo* methodinfo1, MethodInfo* methodinfo2);
+bool check_formal_info_consistency(FormalInfo *formalinfo1, FormalInfo *formalinfo2);
 void add_attr_infos_to_symtab(List<AttrInfo> *attrinfos, SymbolTable<Symbol, Entry> *map);
 
 #endif

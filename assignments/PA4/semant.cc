@@ -219,6 +219,7 @@ void method_class::register_class_info(ClassInfo *info)
   MethodInfo *methodInfo = new MethodInfo();
   methodInfo->name = name;
   methodInfo->retType = return_type;
+  methodInfo->method = this;
   info->methodInfos = new List<MethodInfo>(methodInfo, info->methodInfos);
   int formal_count = formals->len();
   for (int i = formals->first(); formals->more(i); i = formals->next(i))
@@ -230,15 +231,16 @@ void attr_class::register_class_info(ClassInfo *info)
   AttrInfo *attrInfo = new AttrInfo();
   attrInfo->name = name;
   attrInfo->type = type_decl;
+  attrInfo->attr = this;
   info->attrInfos = new List<AttrInfo>(attrInfo, info->attrInfos);
 }
 
 void formal_class::register_class_info(ClassInfo *info)
 {
-  AttrInfo *attrInfo = new AttrInfo();
-  attrInfo->name = name;
-  attrInfo->type = type_decl;
-  info->methodInfos->hd()->argInfos = new List<AttrInfo>(attrInfo, info->methodInfos->hd()->argInfos);
+  FormalInfo *formalInfo = new FormalInfo();
+  formalInfo->name = name;
+  formalInfo->type = type_decl;
+  info->methodInfos->hd()->formalInfos = new List<FormalInfo>(formalInfo, info->methodInfos->hd()->formalInfos);
 }
 
 ClassInfo *ClassTable::find_class_info_by_name_symbol(Symbol name, List<ClassInfo> *until)
@@ -286,16 +288,16 @@ MethodInfo *ClassTable::find_method_info_by_name_symbol(ClassInfo *classinfo, Sy
   return NULL;
 }
 
-AttrInfo *ClassTable::find_arg_info_by_name_symbol(MethodInfo *methodinfo, Symbol name, List<AttrInfo> *until)
+FormalInfo *ClassTable::find_formal_info_by_name_symbol(MethodInfo *methodinfo, Symbol name, List<FormalInfo> *until)
 {
-  List<AttrInfo> *al;
-  AttrInfo *ai;
-  for (al = methodinfo->argInfos; al != until; al = al->tl())
+  List<FormalInfo> *fl;
+  FormalInfo *fi;
+  for (fl = methodinfo->formalInfos; fl != until; fl = fl->tl())
   {
-    ai = al->hd();
-    if (ai->name == name)
+    fi = fl->hd();
+    if (fi->name == name)
     {
-      return ai;
+      return fi;
     }
   }
   return NULL;
@@ -316,9 +318,9 @@ MethodInfo *ClassTable::find_method_info_by_name_symbol(ClassInfo *classinfo, Sy
   return find_method_info_by_name_symbol(classinfo, name, NULL);
 }
 
-AttrInfo *ClassTable::find_arg_info_by_name_symbol(MethodInfo *methodinfo, Symbol name)
+FormalInfo *ClassTable::find_formal_info_by_name_symbol(MethodInfo *methodinfo, Symbol name)
 {
-  return find_arg_info_by_name_symbol(methodinfo, name, NULL);
+  return find_formal_info_by_name_symbol(methodinfo, name, NULL);
 }
 
 AttrInfo *ClassTable::recfind_attr_info_by_name_symbol(ClassInfo *classinfo, Symbol name)
@@ -450,21 +452,21 @@ void ClassTable::check_unique_formal()
   ClassInfo *ci;
   List<MethodInfo> *ml;
   MethodInfo *mi;
-  List<AttrInfo> *al;
-  AttrInfo *ai, *aidup;
+  List<FormalInfo> *fl;
+  FormalInfo *fi, *fidup;
   for (cl = classInfos; cl != NULL; cl = cl->tl())
   {
     ci = cl->hd();
     for (ml = ci->methodInfos; ml != NULL; ml = ml->tl())
     {
       mi = ml->hd();
-      for (al = mi->argInfos; al != NULL; al = al->tl())
+      for (fl = mi->formalInfos; fl != NULL; fl = fl->tl())
       {
-        ai = al->hd();
-        aidup = find_arg_info_by_name_symbol(mi, ai->name, al);
-        if (aidup != NULL)
+        fi = fl->hd();
+        fidup = find_formal_info_by_name_symbol(mi, fi->name, fl);
+        if (fidup != NULL)
         {
-          semant_error(ci->class_) << "class " << ci->name->get_string() << "'s method " << mi->name->get_string() << " has duplicated formals: " << ai->name->get_string() << std::endl;
+          semant_error(ci->class_) << "class " << ci->name->get_string() << "'s method " << mi->name->get_string() << " has duplicated formals: " << fi->name->get_string() << std::endl;
         }
       }
     }
@@ -640,19 +642,24 @@ bool check_attr_info_consistency(AttrInfo *attrinfo1, AttrInfo *attrinfo2)
   return attrinfo1->name == attrinfo2->name && attrinfo1->type == attrinfo2->type;
 }
 
+bool check_formal_info_consistency(FormalInfo *formalinfo1, FormalInfo *formalinfo2)
+{
+  return formalinfo1->name == formalinfo2->name && formalinfo1->type == formalinfo2->type;
+}
+
 bool check_method_info_consistency(MethodInfo *methodinfo1, MethodInfo *methodinfo2)
 {
   if (methodinfo1->name != methodinfo2->name)
     return false;
   if (methodinfo1->retType != methodinfo2->retType)
     return false;
-  if (list_length(methodinfo1->argInfos) != list_length(methodinfo2->argInfos))
+  if (list_length(methodinfo1->formalInfos) != list_length(methodinfo2->formalInfos))
     return false;
-  for (List<AttrInfo> *argInfoTail1 = methodinfo1->argInfos, *argInfoTail2 = methodinfo2->argInfos;
-       argInfoTail1 != NULL && argInfoTail2 != NULL;
-       argInfoTail1 = argInfoTail1->tl(), argInfoTail2 = argInfoTail2->tl())
+  for (List<FormalInfo> *formalInfoTail1 = methodinfo1->formalInfos, *formalInfoTail2 = methodinfo2->formalInfos;
+       formalInfoTail1 != NULL && formalInfoTail2 != NULL;
+       formalInfoTail1 = formalInfoTail1->tl(), formalInfoTail2 = formalInfoTail2->tl())
   {
-    if (check_attr_info_consistency(argInfoTail1->hd(), argInfoTail2->hd()) == false)
+    if (check_formal_info_consistency(formalInfoTail1->hd(), formalInfoTail2->hd()) == false)
       return false;
   }
   return true;
@@ -662,9 +669,23 @@ void ClassTable::check_type_expression()
 {
   List<ClassInfo> *cl;
   ClassInfo *ci;
+  SymbolTable<Symbol, Entry> *map;
+  List<AttrInfo> *al;
+  AttrInfo *ai;
+  List<MethodInfo> *ml;
+  MethodInfo *mi;
   for (cl = classInfos; cl != NULL; cl = cl->tl())
   {
     ci = cl->hd();
+    map = build_class_symtab(ci);
+    for (al = ci->attrInfos; al != NULL; al = al->tl()) {
+      ai = al->hd();
+      check_type_expression_in_attr(ai, ci, map);
+    }
+    for (ml = ci->methodInfos; ml != NULL; ml = ml->tl()) {
+      mi = ml->hd();
+      check_type_expression_in_method(mi, ci, map);
+    }
   }
 }
 
@@ -695,6 +716,14 @@ void add_attr_infos_to_symtab(List<AttrInfo> *attrinfos, SymbolTable<Symbol, Ent
       map->addid(ai->name, ai->type);
     }
   }
+}
+
+void ClassTable::check_type_expression_in_attr(AttrInfo* attrinfo, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* map) {
+
+}
+
+void ClassTable::check_type_expression_in_method(MethodInfo* methodinfo, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* map) {
+
 }
 
 ////////////////////////////////////////////////////////////////////
