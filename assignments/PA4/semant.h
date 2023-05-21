@@ -78,6 +78,12 @@ bool check_attr_info_consistency(AttrInfo* attrinfo1, AttrInfo* attrinfo2);
 bool check_method_info_consistency(MethodInfo* methodinfo1, MethodInfo* methodinfo2);
 bool check_formal_info_consistency(FormalInfo *formalinfo1, FormalInfo *formalinfo2);
 void add_attr_infos_to_symtab(List<AttrInfo> *attrinfos, SymbolTable<Symbol, Entry> *map);
+Symbol check_type_binary_operation(Expression_class* e, Expression_class* e1, Expression_class* e2,
+  char* expr_name, Symbol operandType, Symbol resultType,
+  ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
+Symbol check_type_unary_operation(Expression_class* e, Expression_class* e1,
+  char* expr_name, Symbol operandType, Symbol resultType,
+  ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
 
 #endif
 

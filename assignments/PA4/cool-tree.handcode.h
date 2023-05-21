@@ -143,13 +143,13 @@ void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol
 #define Formal_EXTRAS                              \
 virtual void dump_with_types(ostream&,int) = 0;    \
 virtual void register_class_info(ClassInfo* info) = 0; \
-virtual void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab) = 0;
+virtual void check_type(ClassTable* classtable, ClassInfo* classinfo, Symbol methodName, SymbolTable<Symbol,Entry>* symtab) = 0;
 
 
 #define formal_EXTRAS                           \
 void dump_with_types(ostream&,int);             \
 void register_class_info(ClassInfo* info); \
-void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
+void check_type(ClassTable* classtable, ClassInfo* classinfo, Symbol methodName, SymbolTable<Symbol,Entry>* symtab);
 
 
 #define Case_EXTRAS                             \
@@ -169,9 +169,10 @@ Expression set_type(Symbol s) { type = s; return this; } \
 virtual void dump_with_types(ostream&,int) = 0;  \
 void dump_type(ostream&, int);               \
 Expression_class() { type = (Symbol) NULL; } \
-virtual Symbol check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
+virtual Symbol check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab) = 0;
 
 #define Expression_SHARED_EXTRAS           \
-void dump_with_types(ostream&,int);
+void dump_with_types(ostream&,int);        \
+Symbol check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
 
 #endif

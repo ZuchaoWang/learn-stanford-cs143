@@ -710,46 +710,287 @@ void class__class::check_type(ClassTable *classtable)
 
 void attr_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
+  Symbol effe_type_decl = type_decl;
+  if (classtable->find_class_info_by_name_symbol(type_decl) == NULL)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on attribute type: "
+                                                      << classinfo->name->get_string() << "::" << name->get_string()
+                                                      << ", undefined type " << type_decl->get_string();
+    effe_type_decl = Object;
+  }
   symtab->enterscope();
   Symbol initType = init->check_type(classtable, classinfo, symtab);
   symtab->exitscope();
-  if (initType != No_type && initType != type_decl)
+  if (initType != No_type && initType != effe_type_decl)
   {
     classtable->semant_error(classinfo->class_, this) << "type checking failed on attribute initializer: "
                                                       << classinfo->name->get_string() << "::" << name->get_string()
-                                                      << ", expected type is "<< type_decl->get_string()
-                                                      << ", actual type is "<< initType->get_string()<< std::endl;
+                                                      << ", expected type is " << effe_type_decl->get_string()
+                                                      << ", actual type is " << initType->get_string() << std::endl;
   }
 }
 
 void method_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
+  Symbol effe_return_type = return_type;
+  if (classtable->find_class_info_by_name_symbol(return_type) == NULL)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on method return type: "
+                                                      << classinfo->name->get_string() << "::" << name->get_string()
+                                                      << ", undefined type " << return_type->get_string();
+    effe_return_type = Object;
+  }
   symtab->enterscope();
   for (int i = formals->first(); formals->more(i); i = formals->next(i))
-    formals->nth(i)->check_type(classtable, classinfo, symtab);
+    formals->nth(i)->check_type(classtable, classinfo, name, symtab);
   Symbol exprType = expr->check_type(classtable, classinfo, symtab);
   symtab->exitscope();
-  if (exprType != return_type)
+  if (exprType != effe_return_type)
   {
-    classtable->semant_error(classinfo->class_, this) << "type checking failed on method return value: "
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on method body type: "
                                                       << classinfo->name->get_string() << "::" << name->get_string()
-                                                      << ", expected type is "<< return_type->get_string()
-                                                      << ", actual type is "<< exprType->get_string() << std::endl;
+                                                      << ", expected type is " << effe_return_type->get_string()
+                                                      << ", actual type is " << exprType->get_string() << std::endl;
   }
 }
 
-void formal_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+void formal_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Symbol methodName, SymbolTable<Symbol, Entry> *symtab)
 {
-  symtab->addid(name, type_decl);
+  Symbol effe_type_decl = type_decl;
+  if (classtable->find_class_info_by_name_symbol(type_decl) == NULL)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on formal type: "
+                                                      << classinfo->name->get_string() << "::" << methodName->get_string()
+                                                      << "::" << name->get_string()
+                                                      << ", undefined type " << type_decl->get_string();
+    effe_type_decl = Object;
+  }
+  symtab->addid(name, effe_type_decl);
 }
 
 void branch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
+  // TODO
 }
 
-Symbol Expression_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+Symbol assign_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
+  Symbol idType = symtab->lookup(name);
+  Symbol effe_idType = idType;
+  if (idType == NULL)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on assign expression in class "
+                                                      << classinfo->name->get_string() << ": undefined objectid "
+                                                      << name->get_string() << std::endl;
+    effe_idType = Object;
+  }
+  Symbol exprType = expr->check_type(classtable, classinfo, symtab);
+  if (exprType != effe_idType)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on assign expression in class "
+                                                      << classinfo->name->get_string()
+                                                      << ", objectid type is " << effe_idType->get_string()
+                                                      << ", expression type is " << exprType->get_string() << std::endl;
+  }
+  set_type(effe_idType);
+  return effe_idType;
+}
+
+Symbol static_dispatch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  // TODO
   return Object;
+}
+
+Symbol dispatch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  // TODO
+  return Object;
+}
+
+Symbol cond_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  // TODO
+  return Object;
+}
+
+Symbol loop_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  Symbol predType = pred->check_type(classtable, classinfo, symtab);
+  if (predType != Bool)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on loop expression in class "
+                                                      << classinfo->name->get_string() << ": "
+                                                      << "pred type is " << predType->get_string() << std::endl;
+  }
+  body->check_type(classtable, classinfo, symtab);
+  set_type(Object);
+  return Object;
+}
+
+Symbol typcase_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  // TODO
+  return Object;
+}
+
+Symbol block_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  Symbol retType = Object;
+  for (int i = body->first(); body->more(i); i = body->next(i))
+    retType = body->nth(i)->check_type(classtable, classinfo, symtab);
+  set_type(retType);
+  return retType;
+}
+
+Symbol let_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  // TODO
+  symtab->enterscope();
+
+  symtab->exitscope();
+  return Object;
+}
+
+Symbol check_type_binary_operation(Expression_class *e, Expression_class *e1, Expression_class *e2,
+                                   char *expr_name, Symbol operandType, Symbol resultType,
+                                   ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  Symbol e1Type = e1->check_type(classtable, classinfo, symtab);
+  if (e1Type != operandType)
+  {
+    classtable->semant_error(classinfo->class_, e) << "type checking failed on " << expr_name << " expression in class "
+                                                   << classinfo->name->get_string() << ": "
+                                                   << "operand type is " << e1Type->get_string() << std::endl;
+  }
+  Symbol e2Type = e2->check_type(classtable, classinfo, symtab);
+  if (e2Type != operandType)
+  {
+    classtable->semant_error(classinfo->class_, e) << "type checking failed on " << expr_name << " expression in class "
+                                                   << classinfo->name->get_string() << ": "
+                                                   << "operand type is " << e2Type->get_string() << std::endl;
+  }
+  e->set_type(resultType);
+  return resultType;
+}
+
+Symbol check_type_unary_operation(Expression_class *e, Expression_class *e1,
+                                  char *expr_name, Symbol operandType, Symbol resultType,
+                                  ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  Symbol e1Type = e1->check_type(classtable, classinfo, symtab);
+  if (e1Type != operandType)
+  {
+    classtable->semant_error(classinfo->class_, e) << "type checking failed on " << expr_name << " expression in class "
+                                                   << classinfo->name->get_string() << ": "
+                                                   << "operand type is " << e1Type->get_string() << std::endl;
+  }
+  e->set_type(resultType);
+  return resultType;
+}
+
+Symbol plus_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  return check_type_binary_operation(this, e1, e2, "plus", Int, Int, classtable, classinfo, symtab);
+}
+
+Symbol sub_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  return check_type_binary_operation(this, e1, e2, "sub", Int, Int, classtable, classinfo, symtab);
+}
+
+Symbol mul_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  return check_type_binary_operation(this, e1, e2, "mul", Int, Int, classtable, classinfo, symtab);
+}
+
+Symbol divide_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  return check_type_binary_operation(this, e1, e2, "divide", Int, Int, classtable, classinfo, symtab);
+}
+
+Symbol neg_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  return check_type_unary_operation(this, e1, "neg", Int, Int, classtable, classinfo, symtab);
+}
+
+Symbol lt_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  return check_type_binary_operation(this, e1, e2, "lt", Int, Bool, classtable, classinfo, symtab);
+}
+
+Symbol eq_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  return check_type_binary_operation(this, e1, e2, "eq", Int, Bool, classtable, classinfo, symtab);
+}
+
+Symbol leq_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  return check_type_binary_operation(this, e1, e2, "leq", Int, Bool, classtable, classinfo, symtab);
+}
+
+Symbol comp_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  return check_type_unary_operation(this, e1, "comp", Bool, Bool, classtable, classinfo, symtab);
+}
+
+Symbol int_const_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  set_type(Int);
+  return Int;
+}
+
+Symbol bool_const_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  set_type(Bool);
+  return Bool;
+}
+
+Symbol string_const_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  set_type(Str);
+  return Str;
+}
+
+Symbol new__class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  Symbol effe_type_name = type_name;
+  if (classtable->find_class_info_by_name_symbol(type_name) == NULL)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on new expression in class "
+                                                      << classinfo->name->get_string() << ": undefined class "
+                                                      << type_name->get_string() << std::endl;
+    effe_type_name = Object;
+  }
+  set_type(effe_type_name);
+  return effe_type_name;
+}
+
+Symbol isvoid_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  set_type(Bool);
+  return Bool;
+}
+
+Symbol no_expr_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  set_type(No_type);
+  return No_type;
+}
+
+Symbol object_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+{
+  Symbol idType = symtab->lookup(name);
+  Symbol effe_idType = idType;
+  if (idType == NULL)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on object expression in class "
+                                                      << classinfo->name->get_string() << ": undefined objectid "
+                                                      << name->get_string() << std::endl;
+    effe_idType = Object;
+  }
+  set_type(effe_idType);
+  return effe_idType;
 }
 
 ////////////////////////////////////////////////////////////////////
