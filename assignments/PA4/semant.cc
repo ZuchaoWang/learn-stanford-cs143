@@ -716,13 +716,26 @@ void add_attr_infos_to_symtab(List<AttrInfo> *attrinfos, SymbolTable<Symbol, Ent
   }
 }
 
-void ClassTable::check_type_expression_in_attr(AttrInfo* attrinfo, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* map) {
+void class__class::check_type(ClassTable* classtable)
+{}
 
+void method_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
+{}
+
+void attr_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
+{}
+
+void formal_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
+{}
+
+void branch_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
+{}
+
+Symbol Expression_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
+{
+  return Object;
 }
 
-void ClassTable::check_type_expression_in_method(MethodInfo* methodinfo, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* map) {
-
-}
 
 ////////////////////////////////////////////////////////////////////
 //

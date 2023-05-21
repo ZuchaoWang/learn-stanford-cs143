@@ -47,6 +47,8 @@ typedef Cases_class *Cases;
 class method_class;
 class attr_class;
 
+class ClassTable;
+
 class AttrInfo {
 public:
   Symbol name;
@@ -109,42 +111,49 @@ void dump_with_types(ostream&, int);
 #define Class__EXTRAS                   \
 virtual Symbol get_filename() = 0;      \
 virtual void dump_with_types(ostream&,int) = 0;  \
-virtual void register_class_info(ClassInfo* info) = 0;
+virtual void register_class_info(ClassInfo* info) = 0; \
+virtual void check_type(ClassTable* classtable) = 0;
 
 
 #define class__EXTRAS                                 \
 Symbol get_filename() { return filename; }             \
 void dump_with_types(ostream&,int);                     \
-virtual void register_class_info(ClassInfo* info);
+virtual void register_class_info(ClassInfo* info);       \
+virtual void check_type(ClassTable* classtable);
 
 
 #define Feature_EXTRAS                                        \
 virtual void dump_with_types(ostream&,int) = 0;                \
-virtual void register_class_info(ClassInfo* info) = 0;
+virtual void register_class_info(ClassInfo* info) = 0;          \
+virtual void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab) = 0;
 
 
 #define Feature_SHARED_EXTRAS                                       \
 void dump_with_types(ostream&,int);                                  \
-virtual void register_class_info(ClassInfo* info);
-
+virtual void register_class_info(ClassInfo* info);                    \
+virtual void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
 
 
 #define Formal_EXTRAS                              \
 virtual void dump_with_types(ostream&,int) = 0;    \
-virtual void register_class_info(ClassInfo* info) = 0;
+virtual void register_class_info(ClassInfo* info) = 0; \
+virtual void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab) = 0;
 
 
 #define formal_EXTRAS                           \
 void dump_with_types(ostream&,int);             \
-virtual void register_class_info(ClassInfo* info);
+virtual void register_class_info(ClassInfo* info); \
+virtual void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
 
 
 #define Case_EXTRAS                             \
-virtual void dump_with_types(ostream& ,int) = 0;
+virtual void dump_with_types(ostream& ,int) = 0; \
+virtual void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab) = 0;
 
 
 #define branch_EXTRAS                                   \
-void dump_with_types(ostream& ,int);
+void dump_with_types(ostream& ,int);                     \
+virtual void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
 
 
 #define Expression_EXTRAS                    \
@@ -153,9 +162,10 @@ Symbol get_type() { return type; }           \
 Expression set_type(Symbol s) { type = s; return this; } \
 virtual void dump_with_types(ostream&,int) = 0;  \
 void dump_type(ostream&, int);               \
-Expression_class() { type = (Symbol) NULL; }
+Expression_class() { type = (Symbol) NULL; } \
+virtual Symbol check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
 
 #define Expression_SHARED_EXTRAS           \
-void dump_with_types(ostream&,int); 
+void dump_with_types(ostream&,int);
 
 #endif
