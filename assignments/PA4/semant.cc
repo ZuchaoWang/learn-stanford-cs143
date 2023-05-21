@@ -680,6 +680,34 @@ void add_attr_infos_to_symtab(List<AttrInfo> *attrinfos, SymbolTable<Symbol, Ent
   }
 }
 
+List<Entry> *build_class_chain(ClassTable *classtable, Symbol type)
+{
+  List<Entry> *chain = NULL;
+  ClassInfo *classinfo = classtable->find_class_info_by_name_symbol(type);
+  ClassInfo *ci;
+  for (ci = classinfo; ci->parent != No_class; ci = classtable->find_class_info_by_name_symbol(ci->parent))
+  {
+    chain = new List<Entry>(ci->name, chain);
+  }
+  chain = new List<Entry>(ci->name, chain);
+  assert(ci->name == Object);
+  return chain;
+}
+
+Symbol least_upper_bound(ClassTable *classtable, Symbol type1, Symbol type2)
+{
+  List<Entry> *chain1 = build_class_chain(classtable, type1);
+  List<Entry> *chain2 = build_class_chain(classtable, type2);
+  Symbol lub = Object;
+  for (List<Entry> *l1 = chain1->tl(), *l2 = chain2->tl();
+       l1->hd() == l2->hd() && l1->hd() != NULL;
+       l1 = l1->tl(), l2 = l2->tl())
+  {
+    lub = l1->hd();
+  }
+  return lub;
+}
+
 void program_class::check_type(ClassTable *classtable)
 {
   for (int i = classes->first(); classes->more(i); i = classes->next(i))
@@ -697,10 +725,13 @@ void class__class::check_type(ClassTable *classtable)
   // order actually does not matter due to attr consistency
   assert(name != No_class);
   ClassInfo *classinfo = classtable->find_class_info_by_name_symbol(name);
-  for (ClassInfo *ci = classinfo; ci->parent != No_class; ci = classtable->find_class_info_by_name_symbol(ci->parent))
+  ClassInfo *ci;
+  for (ci = classinfo; ci->parent != No_class; ci = classtable->find_class_info_by_name_symbol(ci->parent))
   {
     add_attr_infos_to_symtab(ci->attrInfos, symtab);
   }
+  add_attr_infos_to_symtab(ci->attrInfos, symtab);
+  assert(ci->name == Object);
   // then check type for all features
   for (int i = features->first(); features->more(i); i = features->next(i))
     features->nth(i)->check_type(classtable, classinfo, symtab);
@@ -810,8 +841,16 @@ Symbol dispatch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, 
 
 Symbol cond_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
-  // TODO
-  return Object;
+  Symbol predType = pred->check_type(classtable, classinfo, symtab);
+  if (predType != Bool)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on cond expression in class "
+                                                      << classinfo->name->get_string() << ": "
+                                                      << "pred type is " << predType->get_string() << std::endl;
+  }
+  Symbol thenType = then_exp->check_type(classtable, classinfo, symtab);
+  Symbol elseType = else_exp->check_type(classtable, classinfo, symtab);
+  return least_upper_bound(classtable, thenType, elseType);
 }
 
 Symbol loop_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
@@ -845,11 +884,28 @@ Symbol block_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Sym
 
 Symbol let_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
-  // TODO
+  Symbol effe_type_decl = type_decl;
+  if (classtable->find_class_info_by_name_symbol(type_decl) == NULL)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on let expression in class "
+                                                      << classinfo->name->get_string()
+                                                      << ", undefined type " << type_decl->get_string();
+    effe_type_decl = Object;
+  }
   symtab->enterscope();
-
+  symtab->addid(identifier, effe_type_decl);
+  Symbol initType = init->check_type(classtable, classinfo, symtab);
+  if (initType != No_type && initType != effe_type_decl)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on let expression in class "
+                                                      << classinfo->name->get_string()
+                                                      << ", objectid type is " << effe_type_decl->get_string()
+                                                      << ", expression type is " << initType->get_string() << std::endl;
+  }
+  Symbol bodyType = body->check_type(classtable, classinfo, symtab);
   symtab->exitscope();
-  return Object;
+  set_type(bodyType);
+  return bodyType;
 }
 
 Symbol check_type_binary_operation(Expression_class *e, Expression_class *e1, Expression_class *e2,

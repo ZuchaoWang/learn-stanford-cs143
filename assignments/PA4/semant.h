@@ -84,6 +84,8 @@ Symbol check_type_binary_operation(Expression_class* e, Expression_class* e1, Ex
 Symbol check_type_unary_operation(Expression_class* e, Expression_class* e1,
   char* expr_name, Symbol operandType, Symbol resultType,
   ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
+Symbol least_upper_bound(ClassTable* classtable, Symbol type1, Symbol type2);
+List<Entry>* build_class_chain(ClassTable* classtable, Symbol type); // parent to child
 
 #endif
 
