@@ -680,13 +680,13 @@ void add_attr_infos_to_symtab(List<AttrInfo> *attrinfos, SymbolTable<Symbol, Ent
   }
 }
 
-void program_class::check_type(ClassTable* classtable)
+void program_class::check_type(ClassTable *classtable)
 {
   for (int i = classes->first(); classes->more(i); i = classes->next(i))
     classes->nth(i)->check_type(classtable);
 }
 
-void class__class::check_type(ClassTable* classtable)
+void class__class::check_type(ClassTable *classtable)
 {
   // build initial symbol table for a class
   // this includes all attributes and ancestor attributes
@@ -696,7 +696,7 @@ void class__class::check_type(ClassTable* classtable)
   // add only if not already added to avoid duplicate
   // order actually does not matter due to attr consistency
   assert(name != No_class);
-  ClassInfo* classinfo = classtable->find_class_info_by_name_symbol(name);
+  ClassInfo *classinfo = classtable->find_class_info_by_name_symbol(name);
   for (ClassInfo *ci = classinfo; ci->parent != No_class; ci = classtable->find_class_info_by_name_symbol(ci->parent))
   {
     add_attr_infos_to_symtab(ci->attrInfos, symtab);
@@ -708,49 +708,49 @@ void class__class::check_type(ClassTable* classtable)
   symtab->exitscope();
 }
 
-void attr_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
+void attr_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
-  if (init->is_no_expr() == false) {
-    symtab->enterscope();
-    Symbol initType = init->check_type(classtable, classinfo, symtab);
-    symtab->exitscope();
-    if (initType != type_decl) {
-      classtable->semant_error(classinfo->class_, this)<<"type checking failed"<<std::endl;
-    }
+  symtab->enterscope();
+  Symbol initType = init->check_type(classtable, classinfo, symtab);
+  symtab->exitscope();
+  if (initType != No_type && initType != type_decl)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on attribute initializer: "
+                                                      << classinfo->name->get_string() << "::" << name->get_string()
+                                                      << ", expected type is "<< type_decl->get_string()
+                                                      << ", actual type is "<< initType->get_string()<< std::endl;
   }
 }
 
-void method_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
+void method_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
   symtab->enterscope();
   for (int i = formals->first(); formals->more(i); i = formals->next(i))
     formals->nth(i)->check_type(classtable, classinfo, symtab);
   Symbol exprType = expr->check_type(classtable, classinfo, symtab);
   symtab->exitscope();
-  if (exprType != return_type) {
-    classtable->semant_error(classinfo->class_, this)<<"type checking failed"<<std::endl;
+  if (exprType != return_type)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on method return value: "
+                                                      << classinfo->name->get_string() << "::" << name->get_string()
+                                                      << ", expected type is "<< return_type->get_string()
+                                                      << ", actual type is "<< exprType->get_string() << std::endl;
   }
 }
 
-void formal_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
+void formal_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
   symtab->addid(name, type_decl);
 }
 
-void branch_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
+void branch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
-
 }
 
-Symbol Expression_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
+Symbol Expression_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
   return Object;
 }
-
-bool Expression_class::is_no_expr() {
-  return false;
-}
-
 
 ////////////////////////////////////////////////////////////////////
 //

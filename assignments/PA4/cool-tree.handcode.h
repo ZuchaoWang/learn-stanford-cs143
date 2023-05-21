@@ -169,8 +169,7 @@ Expression set_type(Symbol s) { type = s; return this; } \
 virtual void dump_with_types(ostream&,int) = 0;  \
 void dump_type(ostream&, int);               \
 Expression_class() { type = (Symbol) NULL; } \
-virtual Symbol check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab); \
-virtual bool is_no_expr();
+virtual Symbol check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
 
 #define Expression_SHARED_EXTRAS           \
 void dump_with_types(ostream&,int);
