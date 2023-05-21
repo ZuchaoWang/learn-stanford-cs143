@@ -219,7 +219,6 @@ void method_class::register_class_info(ClassInfo *info)
   MethodInfo *methodInfo = new MethodInfo();
   methodInfo->name = name;
   methodInfo->retType = return_type;
-  methodInfo->method = this;
   info->methodInfos = new List<MethodInfo>(methodInfo, info->methodInfos);
   int formal_count = formals->len();
   for (int i = formals->first(); formals->more(i); i = formals->next(i))
@@ -231,7 +230,6 @@ void attr_class::register_class_info(ClassInfo *info)
   AttrInfo *attrInfo = new AttrInfo();
   attrInfo->name = name;
   attrInfo->type = type_decl;
-  attrInfo->attr = this;
   info->attrInfos = new List<AttrInfo>(attrInfo, info->attrInfos);
 }
 

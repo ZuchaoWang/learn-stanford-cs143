@@ -51,11 +51,9 @@ class AttrInfo {
 public:
   Symbol name;
   Symbol type;
-  attr_class* attr;
   AttrInfo() {
     name = NULL;
     type = NULL;
-    attr = NULL;
   }
 };
 
@@ -74,18 +72,16 @@ public:
   Symbol name;
   List<FormalInfo>* formalInfos;
   Symbol retType;
-  method_class* method;
   MethodInfo() {
     name = NULL;
     formalInfos = NULL;
     retType = NULL;
-    method = NULL;
   }
 };
 
 class ClassInfo {
 public:
-  Class_ class_;
+  Class_ class_; // for error reporting
   Symbol name;
   Symbol parent;
   List<AttrInfo> *attrInfos;
