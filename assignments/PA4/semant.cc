@@ -739,7 +739,7 @@ void formal_class::check_type(ClassTable* classtable, ClassInfo* classinfo, Symb
 
 void branch_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
 {
-  
+
 }
 
 Symbol Expression_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
@@ -820,6 +820,11 @@ void program_class::semant()
 
   /* semantic analysis on types */
   classtable->check_type_hierarchy();
+  if (classtable->errors())
+  {
+    cerr << "Compilation halted due to static semantic errors." << endl;
+    exit(1);
+  }
   check_type(classtable);
   if (classtable->errors())
   {
