@@ -32,11 +32,6 @@ private:
   MethodInfo* find_method_info_by_name_symbol(ClassInfo* classinfo, Symbol name, List<MethodInfo>* until);
   FormalInfo* find_formal_info_by_name_symbol(MethodInfo* methodinfo, Symbol name, List<FormalInfo>* until);
 
-  ClassInfo* find_class_info_by_name_symbol(Symbol name);
-  AttrInfo* find_attr_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
-  MethodInfo* find_method_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
-  FormalInfo* find_formal_info_by_name_symbol(MethodInfo* methodinfo, Symbol name);
-
   AttrInfo* recfind_attr_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
   MethodInfo* recfind_method_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
 
@@ -48,21 +43,23 @@ private:
   void check_class_parent_exist();
   void check_class_acyclic();
 
-  SymbolTable<Symbol,Entry>* build_class_symtab(ClassInfo* classinfo); /* attr only, since method is immutable */
-  void check_type_expression_in_attr(AttrInfo* attrinfo, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* map);
-  void check_type_expression_in_method(MethodInfo* methodinfo, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* map);
-
 public:
   ClassTable(Classes);
   int errors() { return semant_errors; }
   ostream& semant_error();
   ostream& semant_error(Class_ c);
+  ostream& semant_error(Class_ c, tree_node *t);
   ostream& semant_error(Symbol filename, tree_node *t);
 
   void check_unique_var(); /* name of class, attr, method, formals must be unique */
   void check_class_hierarchy(); /* parent must be defined, and no cycle */
   void check_type_hierarchy(); /* child redefinition of attr and method must be consistent with parent */
   void check_type_expression(); /* attr initializer and method body must be type consistent */
+
+  ClassInfo* find_class_info_by_name_symbol(Symbol name);
+  AttrInfo* find_attr_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
+  MethodInfo* find_method_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
+  FormalInfo* find_formal_info_by_name_symbol(MethodInfo* methodinfo, Symbol name);
 };
 
 class CycleDetector {

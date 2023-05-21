@@ -44,18 +44,17 @@ typedef Expressions_class *Expressions;
 typedef list_node<Case> Cases_class;
 typedef Cases_class *Cases;
 
-class method_class;
-class attr_class;
-
 class ClassTable;
 
 class AttrInfo {
 public:
   Symbol name;
   Symbol type;
+  Feature_class* feature;
   AttrInfo() {
     name = NULL;
     type = NULL;
+    feature = NULL;
   }
 };
 
@@ -63,9 +62,11 @@ class FormalInfo {
 public:
   Symbol name;
   Symbol type;
+  Formal_class* formal;
   FormalInfo() {
     name = NULL;
     type = NULL;
+    formal = NULL;
   }
 };
 
@@ -74,10 +75,12 @@ public:
   Symbol name;
   List<FormalInfo>* formalInfos;
   Symbol retType;
+  Feature_class* feature;
   MethodInfo() {
     name = NULL;
     formalInfos = NULL;
     retType = NULL;
+    feature = NULL;
   }
 };
 
@@ -100,13 +103,15 @@ public:
 
 #define Program_EXTRAS                          \
 virtual void semant() = 0;			\
-virtual void dump_with_types(ostream&, int) = 0; 
-
+virtual void dump_with_types(ostream&, int) = 0; \
+virtual void check_type(ClassTable* classtable) = 0;
 
 
 #define program_EXTRAS                          \
 void semant();     				\
-void dump_with_types(ostream&, int);            
+void dump_with_types(ostream&, int);  \
+void check_type(ClassTable* classtable);          
+
 
 #define Class__EXTRAS                   \
 virtual Symbol get_filename() = 0;      \
@@ -118,8 +123,8 @@ virtual void check_type(ClassTable* classtable) = 0;
 #define class__EXTRAS                                 \
 Symbol get_filename() { return filename; }             \
 void dump_with_types(ostream&,int);                     \
-virtual void register_class_info(ClassInfo* info);       \
-virtual void check_type(ClassTable* classtable);
+void register_class_info(ClassInfo* info);       \
+void check_type(ClassTable* classtable);
 
 
 #define Feature_EXTRAS                                        \
@@ -130,8 +135,8 @@ virtual void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTabl
 
 #define Feature_SHARED_EXTRAS                                       \
 void dump_with_types(ostream&,int);                                  \
-virtual void register_class_info(ClassInfo* info);                    \
-virtual void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
+void register_class_info(ClassInfo* info);                    \
+void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
 
 
 #define Formal_EXTRAS                              \
@@ -142,8 +147,8 @@ virtual void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTabl
 
 #define formal_EXTRAS                           \
 void dump_with_types(ostream&,int);             \
-virtual void register_class_info(ClassInfo* info); \
-virtual void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
+void register_class_info(ClassInfo* info); \
+void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
 
 
 #define Case_EXTRAS                             \
@@ -153,7 +158,7 @@ virtual void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTabl
 
 #define branch_EXTRAS                                   \
 void dump_with_types(ostream& ,int);                     \
-virtual void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
+void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
 
 
 #define Expression_EXTRAS                    \
@@ -163,7 +168,8 @@ Expression set_type(Symbol s) { type = s; return this; } \
 virtual void dump_with_types(ostream&,int) = 0;  \
 void dump_type(ostream&, int);               \
 Expression_class() { type = (Symbol) NULL; } \
-virtual Symbol check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
+virtual Symbol check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab); \
+virtual bool is_no_expr();
 
 #define Expression_SHARED_EXTRAS           \
 void dump_with_types(ostream&,int);

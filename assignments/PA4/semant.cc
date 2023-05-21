@@ -219,6 +219,7 @@ void method_class::register_class_info(ClassInfo *info)
   MethodInfo *methodInfo = new MethodInfo();
   methodInfo->name = name;
   methodInfo->retType = return_type;
+  methodInfo->feature = this;
   info->methodInfos = new List<MethodInfo>(methodInfo, info->methodInfos);
   int formal_count = formals->len();
   for (int i = formals->first(); formals->more(i); i = formals->next(i))
@@ -230,6 +231,7 @@ void attr_class::register_class_info(ClassInfo *info)
   AttrInfo *attrInfo = new AttrInfo();
   attrInfo->name = name;
   attrInfo->type = type_decl;
+  attrInfo->feature = this;
   info->attrInfos = new List<AttrInfo>(attrInfo, info->attrInfos);
 }
 
@@ -238,6 +240,7 @@ void formal_class::register_class_info(ClassInfo *info)
   FormalInfo *formalInfo = new FormalInfo();
   formalInfo->name = name;
   formalInfo->type = type_decl;
+  formalInfo->formal = this;
   info->methodInfos->hd()->formalInfos = new List<FormalInfo>(formalInfo, info->methodInfos->hd()->formalInfos);
 }
 
@@ -417,7 +420,7 @@ void ClassTable::check_unique_attr()
       aidup = find_attr_info_by_name_symbol(ci, ai->name, al);
       if (aidup != NULL)
       {
-        semant_error(ci->class_) << "class " << ci->name->get_string() << " has duplicated attributes: " << ai->name->get_string() << std::endl;
+        semant_error(ci->class_, aidup->feature) << "class " << ci->name->get_string() << " has duplicated attributes: " << ai->name->get_string() << std::endl;
       }
     }
   }
@@ -438,7 +441,7 @@ void ClassTable::check_unique_method()
       midup = find_method_info_by_name_symbol(ci, mi->name, ml);
       if (midup != NULL)
       {
-        semant_error(ci->class_) << "class " << ci->name->get_string() << " has duplicated methods: " << mi->name->get_string() << std::endl;
+        semant_error(ci->class_, midup->feature) << "class " << ci->name->get_string() << " has duplicated methods: " << mi->name->get_string() << std::endl;
       }
     }
   }
@@ -464,7 +467,7 @@ void ClassTable::check_unique_formal()
         fidup = find_formal_info_by_name_symbol(mi, fi->name, fl);
         if (fidup != NULL)
         {
-          semant_error(ci->class_) << "class " << ci->name->get_string() << "'s method " << mi->name->get_string() << " has duplicated formals: " << fi->name->get_string() << std::endl;
+          semant_error(ci->class_, fidup->formal) << "class " << ci->name->get_string() << "'s method " << mi->name->get_string() << " has duplicated formals: " << fi->name->get_string() << std::endl;
         }
       }
     }
@@ -478,10 +481,10 @@ void ClassTable::check_class_parent_exist()
   for (cl = classInfos; cl != NULL; cl = cl->tl())
   {
     ci = cl->hd();
-    if (ci->name == ci->parent)
-    { // forbid self inheritance
-      semant_error(ci->class_);
-    }
+    // if (ci->name == ci->parent)
+    // { // forbid self inheritance
+    //   semant_error(ci->class_);
+    // }
     if (ci->parent != No_class)
     { // must find parent
       ciparent = find_class_info_by_name_symbol(ci->parent);
@@ -527,7 +530,7 @@ void ClassTable::check_class_acyclic()
     List<ClassInfo> *clc = classInfos;
     for (int i = 0; i < indexc; i++)
       clc = clc->tl();
-    semant_error() << "class inheritance cycle detected at: " << clc->hd()->name << std::endl;
+    semant_error(clc->hd()->class_) << "class inheritance cycle detected at: " << clc->hd()->name << std::endl;
   }
 }
 
@@ -617,7 +620,7 @@ void ClassTable::check_type_hierarchy()
         aiparent = recfind_attr_info_by_name_symbol(ciparent, ai->name); // parent attrinfo
         if (aiparent != NULL && check_attr_info_consistency(ai, aiparent) == false)
         {
-          semant_error(ci->class_) << "class " << ci->name->get_string() << " has inconsistent attribute: " << ai->name->get_string() << std::endl;
+          semant_error(ci->class_, ai->feature) << "class " << ci->name->get_string() << " has inconsistent attribute: " << ai->name->get_string() << std::endl;
         }
       }
 
@@ -628,7 +631,7 @@ void ClassTable::check_type_hierarchy()
         miparent = recfind_method_info_by_name_symbol(ciparent, mi->name); // parent methodinfo
         if (miparent != NULL && check_method_info_consistency(mi, miparent) == false)
         {
-          semant_error(ci->class_) << "class " << ci->name->get_string() << " has inconsistent method: " << mi->name->get_string() << std::endl;
+          semant_error(ci->class_, mi->feature) << "class " << ci->name->get_string() << " has inconsistent method: " << mi->name->get_string() << std::endl;
         }
       }
     }
@@ -663,45 +666,6 @@ bool check_method_info_consistency(MethodInfo *methodinfo1, MethodInfo *methodin
   return true;
 }
 
-void ClassTable::check_type_expression()
-{
-  List<ClassInfo> *cl;
-  ClassInfo *ci;
-  SymbolTable<Symbol, Entry> *map;
-  List<AttrInfo> *al;
-  AttrInfo *ai;
-  List<MethodInfo> *ml;
-  MethodInfo *mi;
-  for (cl = classInfos; cl != NULL; cl = cl->tl())
-  {
-    ci = cl->hd();
-    map = build_class_symtab(ci);
-    for (al = ci->attrInfos; al != NULL; al = al->tl()) {
-      ai = al->hd();
-      check_type_expression_in_attr(ai, ci, map);
-    }
-    for (ml = ci->methodInfos; ml != NULL; ml = ml->tl()) {
-      mi = ml->hd();
-      check_type_expression_in_method(mi, ci, map);
-    }
-  }
-}
-
-SymbolTable<Symbol, Entry> *ClassTable::build_class_symtab(ClassInfo *classinfo)
-{
-  SymbolTable<Symbol, Entry> *map = new SymbolTable<Symbol, Entry>();
-  map->enterscope();
-  // add attr info from current class to parent to No_class
-  // add only if not already added to avoid duplicate
-  // order actually does not matter due to attr consistency
-  assert(classinfo->name != No_class);
-  for (ClassInfo *ci = classinfo; ci->parent != No_class; ci = find_class_info_by_name_symbol(ci->parent))
-  {
-    add_attr_infos_to_symtab(ci->attrInfos, map);
-  }
-  return map;
-}
-
 void add_attr_infos_to_symtab(List<AttrInfo> *attrinfos, SymbolTable<Symbol, Entry> *map)
 {
   List<AttrInfo> *al;
@@ -716,24 +680,75 @@ void add_attr_infos_to_symtab(List<AttrInfo> *attrinfos, SymbolTable<Symbol, Ent
   }
 }
 
-void class__class::check_type(ClassTable* classtable)
-{}
+void program_class::check_type(ClassTable* classtable)
+{
+  for (int i = classes->first(); classes->more(i); i = classes->next(i))
+    classes->nth(i)->check_type(classtable);
+}
 
-void method_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
-{}
+void class__class::check_type(ClassTable* classtable)
+{
+  // build initial symbol table for a class
+  // this includes all attributes and ancestor attributes
+  SymbolTable<Symbol, Entry> *symtab = new SymbolTable<Symbol, Entry>();
+  symtab->enterscope();
+  // add attr info from current class to parent to No_class
+  // add only if not already added to avoid duplicate
+  // order actually does not matter due to attr consistency
+  assert(name != No_class);
+  ClassInfo* classinfo = classtable->find_class_info_by_name_symbol(name);
+  for (ClassInfo *ci = classinfo; ci->parent != No_class; ci = classtable->find_class_info_by_name_symbol(ci->parent))
+  {
+    add_attr_infos_to_symtab(ci->attrInfos, symtab);
+  }
+  // then check type for all features
+  for (int i = features->first(); features->more(i); i = features->next(i))
+    features->nth(i)->check_type(classtable, classinfo, symtab);
+  // finally exit scope for cleanness
+  symtab->exitscope();
+}
 
 void attr_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
-{}
+{
+  if (init->is_no_expr() == false) {
+    symtab->enterscope();
+    Symbol initType = init->check_type(classtable, classinfo, symtab);
+    symtab->exitscope();
+    if (initType != type_decl) {
+      classtable->semant_error(classinfo->class_, this)<<"type checking failed"<<std::endl;
+    }
+  }
+}
+
+void method_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
+{
+  symtab->enterscope();
+  for (int i = formals->first(); formals->more(i); i = formals->next(i))
+    formals->nth(i)->check_type(classtable, classinfo, symtab);
+  Symbol exprType = expr->check_type(classtable, classinfo, symtab);
+  symtab->exitscope();
+  if (exprType != return_type) {
+    classtable->semant_error(classinfo->class_, this)<<"type checking failed"<<std::endl;
+  }
+}
 
 void formal_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
-{}
+{
+  symtab->addid(name, type_decl);
+}
 
 void branch_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
-{}
+{
+  
+}
 
 Symbol Expression_class::check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab)
 {
   return Object;
+}
+
+bool Expression_class::is_no_expr() {
+  return false;
 }
 
 
@@ -755,6 +770,11 @@ Symbol Expression_class::check_type(ClassTable* classtable, ClassInfo* classinfo
 ostream &ClassTable::semant_error(Class_ c)
 {
   return semant_error(c->get_filename(), c);
+}
+
+ostream &ClassTable::semant_error(Class_ c, tree_node *t)
+{
+  return semant_error(c->get_filename(), t);
 }
 
 ostream &ClassTable::semant_error(Symbol filename, tree_node *t)
@@ -800,7 +820,7 @@ void program_class::semant()
 
   /* semantic analysis on types */
   classtable->check_type_hierarchy();
-  classtable->check_type_expression();
+  check_type(classtable);
   if (classtable->errors())
   {
     cerr << "Compilation halted due to static semantic errors." << endl;
