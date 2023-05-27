@@ -821,8 +821,40 @@ Symbol dispatch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, 
 {
   Symbol exprType = expr->check_type(classtable, classinfo, symtab);
   ClassInfo *ci = classtable->find_class_info_by_name_symbol(exprType);
+  if (ci == NULL)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on dispatch expression in class "
+                                                      << classinfo->name->get_string() << ": "
+                                                      << "expr type undefined " << exprType->get_string() << std::endl;
+  }
   MethodInfo *mi = classtable->recfind_method_info_by_name_symbol(ci, name);
-  return Object;
+  if (mi == NULL)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on dispatch expression in class "
+                                                      << classinfo->name->get_string() << ": "
+                                                      << "method undefined " << name->get_string() << std::endl;
+  }
+  int argNum = actual->len();
+  List<FormalInfo>* fl = mi->formalInfos;
+  int formalNum = list_length(fl);
+  if (formalNum != argNum) {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on dispatch expression in class "
+                                                      << classinfo->name->get_string() << ": "
+                                                      << "method " << name->get_string() << " expects "
+                                                      << formalNum << " formals, but see " << argNum << " args" << std::endl;
+  }
+  for (int i = actual->first(); actual->more(i) && list_more(fl, i); i = actual->next(i)) {
+    Symbol argType = actual->nth(i)->check_type(classtable, classinfo, symtab);
+    FormalInfo* fi = list_nth(fl, i);
+    if (is_subtype(classtable, argType, fi->type) == false) {
+      classtable->semant_error(classinfo->class_, this) << "type checking failed on dispatch expression in class "
+                                                      << classinfo->name->get_string() << ": "
+                                                      << "method " << name->get_string() << " formal "
+                                                      << fi->name->get_string() << " expects type "
+                                                      << fi->type->get_string() << " , actual type " << argType->get_string() << std::endl;
+    }
+  }
+  return mi->retType;
 }
 
 Symbol cond_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
