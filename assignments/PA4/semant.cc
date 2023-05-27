@@ -813,8 +813,55 @@ Symbol assign_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Sy
 
 Symbol static_dispatch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
-  // TODO
-  return Object;
+  Symbol exprType = expr->check_type(classtable, classinfo, symtab);
+  if (is_subtype(classtable, exprType, type_name) == false)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on static dispatch expression in class "
+                                                      << classinfo->name->get_string() << ": "
+                                                      << "expr type " << exprType->get_string()
+                                                      << "is not a subtype of " << type_name->get_string() << std::endl;
+    return Object;
+  }
+  ClassInfo *ci = classtable->find_class_info_by_name_symbol(type_name);
+  if (ci == NULL)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on static dispatch expression in class "
+                                                      << classinfo->name->get_string() << ": "
+                                                      << "type_name undefined " << exprType->get_string() << std::endl;
+    return Object;
+  }
+  MethodInfo *mi = classtable->recfind_method_info_by_name_symbol(ci, name);
+  if (mi == NULL)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on static dispatch expression in class "
+                                                      << classinfo->name->get_string() << ": "
+                                                      << "method undefined " << name->get_string() << std::endl;
+    return Object;
+  }
+  int argNum = actual->len();
+  List<FormalInfo> *fl = mi->formalInfos;
+  int formalNum = list_length(fl);
+  if (formalNum != argNum)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on static dispatch expression in class "
+                                                      << classinfo->name->get_string() << ": "
+                                                      << "method " << name->get_string() << " expects "
+                                                      << formalNum << " formals, but see " << argNum << " args" << std::endl;
+  }
+  for (int i = actual->first(); actual->more(i) && list_more(fl, i); i = actual->next(i))
+  {
+    Symbol argType = actual->nth(i)->check_type(classtable, classinfo, symtab);
+    FormalInfo *fi = list_nth(fl, i);
+    if (is_subtype(classtable, argType, fi->type) == false)
+    {
+      classtable->semant_error(classinfo->class_, this) << "type checking failed on static dispatch expression in class "
+                                                        << classinfo->name->get_string() << ": "
+                                                        << "method " << name->get_string() << " formal "
+                                                        << fi->name->get_string() << " expects type "
+                                                        << fi->type->get_string() << " , actual type " << argType->get_string() << std::endl;
+    }
+  }
+  return mi->retType;
 }
 
 Symbol dispatch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
@@ -826,6 +873,7 @@ Symbol dispatch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, 
     classtable->semant_error(classinfo->class_, this) << "type checking failed on dispatch expression in class "
                                                       << classinfo->name->get_string() << ": "
                                                       << "expr type undefined " << exprType->get_string() << std::endl;
+    return Object;
   }
   MethodInfo *mi = classtable->recfind_method_info_by_name_symbol(ci, name);
   if (mi == NULL)
@@ -833,25 +881,29 @@ Symbol dispatch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, 
     classtable->semant_error(classinfo->class_, this) << "type checking failed on dispatch expression in class "
                                                       << classinfo->name->get_string() << ": "
                                                       << "method undefined " << name->get_string() << std::endl;
+    return Object;
   }
   int argNum = actual->len();
-  List<FormalInfo>* fl = mi->formalInfos;
+  List<FormalInfo> *fl = mi->formalInfos;
   int formalNum = list_length(fl);
-  if (formalNum != argNum) {
+  if (formalNum != argNum)
+  {
     classtable->semant_error(classinfo->class_, this) << "type checking failed on dispatch expression in class "
                                                       << classinfo->name->get_string() << ": "
                                                       << "method " << name->get_string() << " expects "
                                                       << formalNum << " formals, but see " << argNum << " args" << std::endl;
   }
-  for (int i = actual->first(); actual->more(i) && list_more(fl, i); i = actual->next(i)) {
+  for (int i = actual->first(); actual->more(i) && list_more(fl, i); i = actual->next(i))
+  {
     Symbol argType = actual->nth(i)->check_type(classtable, classinfo, symtab);
-    FormalInfo* fi = list_nth(fl, i);
-    if (is_subtype(classtable, argType, fi->type) == false) {
+    FormalInfo *fi = list_nth(fl, i);
+    if (is_subtype(classtable, argType, fi->type) == false)
+    {
       classtable->semant_error(classinfo->class_, this) << "type checking failed on dispatch expression in class "
-                                                      << classinfo->name->get_string() << ": "
-                                                      << "method " << name->get_string() << " formal "
-                                                      << fi->name->get_string() << " expects type "
-                                                      << fi->type->get_string() << " , actual type " << argType->get_string() << std::endl;
+                                                        << classinfo->name->get_string() << ": "
+                                                        << "method " << name->get_string() << " formal "
+                                                        << fi->name->get_string() << " expects type "
+                                                        << fi->type->get_string() << " , actual type " << argType->get_string() << std::endl;
     }
   }
   return mi->retType;
