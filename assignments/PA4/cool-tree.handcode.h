@@ -154,12 +154,12 @@ void check_type(ClassTable* classtable, ClassInfo* classinfo, Symbol methodName,
 
 #define Case_EXTRAS                             \
 virtual void dump_with_types(ostream& ,int) = 0; \
-virtual void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab) = 0;
+virtual Symbol check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab) = 0;
 
 
 #define branch_EXTRAS                                   \
 void dump_with_types(ostream& ,int);                     \
-void check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
+Symbol check_type(ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
 
 
 #define Expression_EXTRAS                    \

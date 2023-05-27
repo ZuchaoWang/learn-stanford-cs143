@@ -27,13 +27,10 @@ private:
   ostream& error_stream;
   List<ClassInfo> *classInfos;
 
-  ClassInfo* find_class_info_by_name_symbol(Symbol name, List<ClassInfo>* until);
-  AttrInfo* find_attr_info_by_name_symbol(ClassInfo* classinfo, Symbol name, List<AttrInfo>* until);
-  MethodInfo* find_method_info_by_name_symbol(ClassInfo* classinfo, Symbol name, List<MethodInfo>* until);
-  FormalInfo* find_formal_info_by_name_symbol(MethodInfo* methodinfo, Symbol name, List<FormalInfo>* until);
-
-  AttrInfo* recfind_attr_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
-  MethodInfo* recfind_method_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
+  ClassInfo* find_class_info_by_name_symbol(Symbol name, int n);
+  AttrInfo* find_attr_info_by_name_symbol(ClassInfo* classinfo, Symbol name, int n);
+  MethodInfo* find_method_info_by_name_symbol(ClassInfo* classinfo, Symbol name, int n);
+  FormalInfo* find_formal_info_by_name_symbol(MethodInfo* methodinfo, Symbol name, int n);
 
   void check_unique_class();
   void check_unique_attr();
@@ -60,6 +57,9 @@ public:
   AttrInfo* find_attr_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
   MethodInfo* find_method_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
   FormalInfo* find_formal_info_by_name_symbol(MethodInfo* methodinfo, Symbol name);
+
+  AttrInfo* recfind_attr_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
+  MethodInfo* recfind_method_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
 };
 
 class CycleDetector {
@@ -85,7 +85,30 @@ Symbol check_type_unary_operation(Expression_class* e, Expression_class* e1,
   char* expr_name, Symbol operandType, Symbol resultType,
   ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
 Symbol least_upper_bound(ClassTable* classtable, Symbol type1, Symbol type2);
-List<Entry>* build_class_chain(ClassTable* classtable, Symbol type); // parent to child
+bool is_subtype(ClassTable* classtable, Symbol type1, Symbol type2);
+List<Entry>* build_class_chain(ClassTable* classtable, Symbol type); // parent to child, start from Object
+
+template<class T>
+int list_first(List<T> *l) {
+  return 0;
+};
+
+template<class T>
+int list_more(List<T> *l, int n) {
+  return n < list_length(l);
+}
+
+template<class T>
+int list_next(List<T> *l, int n) {
+  return n+1;
+}
+
+template<class T>
+T* list_nth(List<T> *l, int n) {
+  assert(l != NULL);
+  if (n == 0) return l->hd();
+  else return list_nth(l->tail(), n-1);
+}
 
 #endif
 

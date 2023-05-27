@@ -244,13 +244,10 @@ void formal_class::register_class_info(ClassInfo *info)
   info->methodInfos->hd()->formalInfos = new List<FormalInfo>(formalInfo, info->methodInfos->hd()->formalInfos);
 }
 
-ClassInfo *ClassTable::find_class_info_by_name_symbol(Symbol name, List<ClassInfo> *until)
+ClassInfo *ClassTable::find_class_info_by_name_symbol(Symbol name, int n)
 {
-  List<ClassInfo> *cl;
-  ClassInfo *ci;
-  for (cl = classInfos; cl != until; cl = cl->tl())
-  {
-    ci = cl->hd();
+  for (int i = list_first(classInfos); i!=n; i = list_next(classInfos, i)) {
+    ClassInfo *ci = list_nth(classInfos, i);
     if (ci->name == name)
     {
       return ci;
@@ -259,13 +256,11 @@ ClassInfo *ClassTable::find_class_info_by_name_symbol(Symbol name, List<ClassInf
   return NULL;
 }
 
-AttrInfo *ClassTable::find_attr_info_by_name_symbol(ClassInfo *classinfo, Symbol name, List<AttrInfo> *until)
+AttrInfo *ClassTable::find_attr_info_by_name_symbol(ClassInfo *classinfo, Symbol name, int n)
 {
-  List<AttrInfo> *al;
-  AttrInfo *ai;
-  for (al = classinfo->attrInfos; al != until; al = al->tl())
-  {
-    ai = al->hd();
+  List<AttrInfo> *al = classinfo->attrInfos;
+  for (int i = list_first(al); i!=n; i = list_next(al, i)) {
+    AttrInfo *ai = list_nth(al, i);
     if (ai->name == name)
     {
       return ai;
@@ -274,13 +269,11 @@ AttrInfo *ClassTable::find_attr_info_by_name_symbol(ClassInfo *classinfo, Symbol
   return NULL;
 }
 
-MethodInfo *ClassTable::find_method_info_by_name_symbol(ClassInfo *classinfo, Symbol name, List<MethodInfo> *until)
+MethodInfo *ClassTable::find_method_info_by_name_symbol(ClassInfo *classinfo, Symbol name, int n)
 {
-  List<MethodInfo> *ml;
-  MethodInfo *mi;
-  for (ml = classinfo->methodInfos; ml != until; ml = ml->tl())
-  {
-    mi = ml->hd();
+  List<MethodInfo> *ml = classinfo->methodInfos;
+  for (int i = list_first(ml); i!=n; i = list_next(ml, i)) {
+    MethodInfo *mi = list_nth(ml, i);
     if (mi->name == name)
     {
       return mi;
@@ -289,13 +282,11 @@ MethodInfo *ClassTable::find_method_info_by_name_symbol(ClassInfo *classinfo, Sy
   return NULL;
 }
 
-FormalInfo *ClassTable::find_formal_info_by_name_symbol(MethodInfo *methodinfo, Symbol name, List<FormalInfo> *until)
+FormalInfo *ClassTable::find_formal_info_by_name_symbol(MethodInfo *methodinfo, Symbol name, int n)
 {
-  List<FormalInfo> *fl;
-  FormalInfo *fi;
-  for (fl = methodinfo->formalInfos; fl != until; fl = fl->tl())
-  {
-    fi = fl->hd();
+  List<FormalInfo> *fl = methodinfo->formalInfos;
+  for (int i = list_first(fl); i!=n; i = list_next(fl, i)) {
+    FormalInfo *fi = list_nth(fl, i);
     if (fi->name == name)
     {
       return fi;
@@ -306,22 +297,22 @@ FormalInfo *ClassTable::find_formal_info_by_name_symbol(MethodInfo *methodinfo, 
 
 ClassInfo *ClassTable::find_class_info_by_name_symbol(Symbol name)
 {
-  return find_class_info_by_name_symbol(name, NULL);
+  return find_class_info_by_name_symbol(name, -1);
 }
 
 AttrInfo *ClassTable::find_attr_info_by_name_symbol(ClassInfo *classinfo, Symbol name)
 {
-  return find_attr_info_by_name_symbol(classinfo, name, NULL);
+  return find_attr_info_by_name_symbol(classinfo, name, -1);
 }
 
 MethodInfo *ClassTable::find_method_info_by_name_symbol(ClassInfo *classinfo, Symbol name)
 {
-  return find_method_info_by_name_symbol(classinfo, name, NULL);
+  return find_method_info_by_name_symbol(classinfo, name, -1);
 }
 
 FormalInfo *ClassTable::find_formal_info_by_name_symbol(MethodInfo *methodinfo, Symbol name)
 {
-  return find_formal_info_by_name_symbol(methodinfo, name, NULL);
+  return find_formal_info_by_name_symbol(methodinfo, name, -1);
 }
 
 AttrInfo *ClassTable::recfind_attr_info_by_name_symbol(ClassInfo *classinfo, Symbol name)
@@ -392,12 +383,10 @@ void ClassTable::check_class_hierarchy()
 
 void ClassTable::check_unique_class()
 {
-  List<ClassInfo> *cl;
-  ClassInfo *ci, *cidup;
-  for (cl = classInfos; cl != NULL; cl = cl->tl())
+  for (int i = list_first(classInfos); list_more(classInfos, i); i = list_next(classInfos, i))
   {
-    ci = cl->hd();
-    cidup = find_class_info_by_name_symbol(ci->name, cl);
+    ClassInfo *ci = list_nth(classInfos, i);
+    ClassInfo *cidup = find_class_info_by_name_symbol(ci->name, i);
     if (cidup != NULL)
     {
       semant_error(cidup->class_) << "class name duplicated: " << ci->name->get_string() << std::endl;
@@ -407,17 +396,13 @@ void ClassTable::check_unique_class()
 
 void ClassTable::check_unique_attr()
 {
-  List<ClassInfo> *cl;
-  ClassInfo *ci;
-  List<AttrInfo> *al;
-  AttrInfo *ai, *aidup;
-  for (cl = classInfos; cl != NULL; cl = cl->tl())
+  for (int i = list_first(classInfos); list_more(classInfos, i); i = list_next(classInfos, i))
   {
-    ci = cl->hd();
-    for (al = ci->attrInfos; al != NULL; al = al->tl())
-    {
-      ai = al->hd();
-      aidup = find_attr_info_by_name_symbol(ci, ai->name, al);
+    ClassInfo *ci = list_nth(classInfos, i);
+    List<AttrInfo> *al = ci->attrInfos;
+    for (int j = list_first(al); list_more(al, j); j = list_next(al, j)) {
+      AttrInfo *ai = list_nth(al, j);
+      AttrInfo *aidup = find_attr_info_by_name_symbol(ci, ai->name, j);
       if (aidup != NULL)
       {
         semant_error(ci->class_, aidup->feature) << "class " << ci->name->get_string() << " has duplicated attributes: " << ai->name->get_string() << std::endl;
@@ -428,17 +413,13 @@ void ClassTable::check_unique_attr()
 
 void ClassTable::check_unique_method()
 {
-  List<ClassInfo> *cl;
-  ClassInfo *ci;
-  List<MethodInfo> *ml;
-  MethodInfo *mi, *midup;
-  for (cl = classInfos; cl != NULL; cl = cl->tl())
+  for (int i = list_first(classInfos); list_more(classInfos, i); i = list_next(classInfos, i))
   {
-    ci = cl->hd();
-    for (ml = ci->methodInfos; ml != NULL; ml = ml->tl())
-    {
-      mi = ml->hd();
-      midup = find_method_info_by_name_symbol(ci, mi->name, ml);
+    ClassInfo *ci = list_nth(classInfos, i);
+    List<MethodInfo> *ml = ci->methodInfos;
+    for (int j = list_first(ml); list_more(ml, j); j = list_next(ml, j)) {
+      MethodInfo *mi = list_nth(ml, j);
+      MethodInfo *midup = find_method_info_by_name_symbol(ci, mi->name, j);
       if (midup != NULL)
       {
         semant_error(ci->class_, midup->feature) << "class " << ci->name->get_string() << " has duplicated methods: " << mi->name->get_string() << std::endl;
@@ -449,22 +430,17 @@ void ClassTable::check_unique_method()
 
 void ClassTable::check_unique_formal()
 {
-  List<ClassInfo> *cl;
-  ClassInfo *ci;
-  List<MethodInfo> *ml;
-  MethodInfo *mi;
-  List<FormalInfo> *fl;
-  FormalInfo *fi, *fidup;
-  for (cl = classInfos; cl != NULL; cl = cl->tl())
+  for (int i = list_first(classInfos); list_more(classInfos, i); i = list_next(classInfos, i))
   {
-    ci = cl->hd();
-    for (ml = ci->methodInfos; ml != NULL; ml = ml->tl())
-    {
-      mi = ml->hd();
-      for (fl = mi->formalInfos; fl != NULL; fl = fl->tl())
+    ClassInfo *ci = list_nth(classInfos, i);
+    List<MethodInfo> *ml = ci->methodInfos;
+    for (int j = list_first(ml); list_more(ml, j); j = list_next(ml, j)) {
+      MethodInfo *mi = list_nth(ml, j);
+      List<FormalInfo> *fl = mi->formalInfos;
+      for (int k = list_first(fl); list_more(fl, k); k = list_next(fl, k))
       {
-        fi = fl->hd();
-        fidup = find_formal_info_by_name_symbol(mi, fi->name, fl);
+        FormalInfo *fi = list_nth(fl, k);
+        FormalInfo *fidup = find_formal_info_by_name_symbol(mi, fi->name, k);
         if (fidup != NULL)
         {
           semant_error(ci->class_, fidup->formal) << "class " << ci->name->get_string() << "'s method " << mi->name->get_string() << " has duplicated formals: " << fi->name->get_string() << std::endl;
@@ -476,18 +452,12 @@ void ClassTable::check_unique_formal()
 
 void ClassTable::check_class_parent_exist()
 {
-  List<ClassInfo> *cl, *cl2;
-  ClassInfo *ci, *ciparent;
-  for (cl = classInfos; cl != NULL; cl = cl->tl())
+  for (int i = list_first(classInfos); list_more(classInfos, i); i = list_next(classInfos, i))
   {
-    ci = cl->hd();
-    // if (ci->name == ci->parent)
-    // { // forbid self inheritance
-    //   semant_error(ci->class_);
-    // }
-    if (ci->parent != No_class)
+    ClassInfo *ci = list_nth(classInfos, i);
+    if (ci->name != Object)
     { // must find parent
-      ciparent = find_class_info_by_name_symbol(ci->parent);
+      ClassInfo *ciparent = find_class_info_by_name_symbol(ci->parent);
       if (ciparent == NULL)
       {
         semant_error(ci->class_) << "class " << ci->name->get_string() << "'s parent " << ci->parent->get_string() << " does not exist" << std::endl;
@@ -498,39 +468,32 @@ void ClassTable::check_class_parent_exist()
 
 void ClassTable::check_class_acyclic()
 {
-  int vn = list_length(classInfos) + 1;
-  CycleDetector cd = CycleDetector(vn); // +1 for No_class
-  List<ClassInfo> *cl1, *cl2;
-  ClassInfo *ci1, *ci2;
-  int index1, index2;
-  index1 = 0;
-  for (cl1 = classInfos; cl1 != NULL; cl1 = cl1->tl())
+  int vn = list_length(classInfos) + 1; // total number of classes including No_class, No_class not in classInfos
+  CycleDetector cd = CycleDetector(vn); // No_class has index vn-1
+  for (int i = list_first(classInfos); list_more(classInfos, i); i = list_next(classInfos, i))
   {
-    index1++;
-    ci1 = cl1->hd();
-    index2 = 0;
-    if (ci1->parent != No_class)
+    ClassInfo *ci1 = list_nth(classInfos, i);
+    int j = vn-1;
+    if (ci1->name != Object)
     {
-      for (cl2 = classInfos; cl2 != NULL; cl2 = cl2->tl())
+      for (j = list_first(classInfos); list_more(classInfos, j); j = list_next(classInfos, j))
       {
-        index2++;
-        ci2 = cl2->hd();
+        ClassInfo *ci2 = list_nth(classInfos, j);
         if (ci2->name == ci1->parent)
         {
           break;
         }
       }
+      assert(j < vn-1);
     }
-    assert(index2 < vn);
-    cd.addEdge(index2, index1);
+    cd.addEdge(j, i);
   }
-  int indexc = cd.detectCycle();
-  if (indexc > -1)
+  int k = cd.detectCycle();
+  assert(k!= vn-1); // No_class can not in cycle
+  if (k > -1)
   {
-    List<ClassInfo> *clc = classInfos;
-    for (int i = 0; i < indexc; i++)
-      clc = clc->tl();
-    semant_error(clc->hd()->class_) << "class inheritance cycle detected at: " << clc->hd()->name << std::endl;
+    ClassInfo *ci3 = list_nth(classInfos, k);
+    semant_error(ci3->class_) << "class inheritance cycle detected at: " << ci3->name << std::endl;
   }
 }
 
@@ -683,14 +646,13 @@ void add_attr_infos_to_symtab(List<AttrInfo> *attrinfos, SymbolTable<Symbol, Ent
 List<Entry> *build_class_chain(ClassTable *classtable, Symbol type)
 {
   List<Entry> *chain = NULL;
-  ClassInfo *classinfo = classtable->find_class_info_by_name_symbol(type);
-  ClassInfo *ci;
-  for (ci = classinfo; ci->parent != No_class; ci = classtable->find_class_info_by_name_symbol(ci->parent))
+  for (ClassInfo *ci = classtable->find_class_info_by_name_symbol(type);
+    ci->name != Object;
+    ci = classtable->find_class_info_by_name_symbol(ci->parent))
   {
     chain = new List<Entry>(ci->name, chain);
   }
-  chain = new List<Entry>(ci->name, chain);
-  assert(ci->name == Object);
+  chain = new List<Entry>(Object, chain);
   return chain;
 }
 
@@ -706,6 +668,16 @@ Symbol least_upper_bound(ClassTable *classtable, Symbol type1, Symbol type2)
     lub = l1->hd();
   }
   return lub;
+}
+
+bool is_subtype(ClassTable* classtable, Symbol type1, Symbol type2) {
+  ClassInfo *classinfo = classtable->find_class_info_by_name_symbol(type1);
+  ClassInfo *ci;
+  for (ci = classinfo; ci->name != Object; ci = classtable->find_class_info_by_name_symbol(ci->parent))
+  {
+    if (ci->name == type2) return true;
+  }
+  return false;
 }
 
 void program_class::check_type(ClassTable *classtable)
@@ -726,7 +698,7 @@ void class__class::check_type(ClassTable *classtable)
   assert(name != No_class);
   ClassInfo *classinfo = classtable->find_class_info_by_name_symbol(name);
   ClassInfo *ci;
-  for (ci = classinfo; ci->parent != No_class; ci = classtable->find_class_info_by_name_symbol(ci->parent))
+  for (ci = classinfo; ci->name != Object; ci = classtable->find_class_info_by_name_symbol(ci->parent))
   {
     add_attr_infos_to_symtab(ci->attrInfos, symtab);
   }
@@ -799,9 +771,21 @@ void formal_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Symb
   symtab->addid(name, effe_type_decl);
 }
 
-void branch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
+Symbol branch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
-  // TODO
+  Symbol effe_type_decl = type_decl;
+  if (classtable->find_class_info_by_name_symbol(type_decl) == NULL)
+  {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on branch in class "
+                                                      << classinfo->name->get_string()
+                                                      << ", undefined type " << type_decl->get_string();
+    effe_type_decl = Object;
+  }
+  symtab->enterscope();
+  symtab->addid(name, effe_type_decl);
+  Symbol exprType = expr->check_type(classtable, classinfo, symtab);
+  symtab->exitscope();
+  return exprType;
 }
 
 Symbol assign_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
@@ -835,7 +819,9 @@ Symbol static_dispatch_class::check_type(ClassTable *classtable, ClassInfo *clas
 
 Symbol dispatch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
-  // TODO
+  Symbol exprType = expr->check_type(classtable, classinfo, symtab);
+  ClassInfo* ci = classtable->find_class_info_by_name_symbol(exprType);
+  MethodInfo* mi = classtable->recfind_method_info_by_name_symbol(ci, name);
   return Object;
 }
 
@@ -869,8 +855,12 @@ Symbol loop_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Symb
 
 Symbol typcase_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
-  // TODO
-  return Object;
+  Symbol exprType = expr->check_type(classtable, classinfo, symtab);
+  int i = cases->first();
+  Symbol retType = cases->nth(i)->check_type(classtable, classinfo, symtab);
+  for (int i = cases->next(i); cases->more(i); i = cases->next(i))
+    retType = least_upper_bound(classtable, retType, cases->nth(i)->check_type(classtable, classinfo, symtab));
+  return retType;
 }
 
 Symbol block_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
