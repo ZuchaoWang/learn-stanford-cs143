@@ -862,6 +862,7 @@ Symbol static_dispatch_class::check_type(ClassTable *classtable, ClassInfo *clas
                                                         << fi->type->get_string() << " , actual type " << argType->get_string() << std::endl;
     }
   }
+  set_type(mi->retType);
   return mi->retType;
 }
 
@@ -907,6 +908,7 @@ Symbol dispatch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, 
                                                         << fi->type->get_string() << " , actual type " << argType->get_string() << std::endl;
     }
   }
+  set_type(mi->retType);
   return mi->retType;
 }
 
@@ -945,6 +947,7 @@ Symbol typcase_class::check_type(ClassTable *classtable, ClassInfo *classinfo, S
   Symbol retType = cases->nth(i0)->check_type(classtable, classinfo, symtab);
   for (int i = cases->next(i0); cases->more(i); i = cases->next(i))
     retType = least_upper_bound(classtable, retType, cases->nth(i)->check_type(classtable, classinfo, symtab));
+  set_type(retType);
   return retType;
 }
 
@@ -1111,17 +1114,22 @@ Symbol no_expr_class::check_type(ClassTable *classtable, ClassInfo *classinfo, S
 
 Symbol object_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
-  Symbol idType = symtab->lookup(name);
-  Symbol effe_idType = idType;
-  if (idType == NULL)
-  {
-    classtable->semant_error(classinfo->class_, this) << "type checking failed on object expression in class "
-                                                      << classinfo->name->get_string() << ": undefined objectid "
-                                                      << name->get_string() << std::endl;
-    effe_idType = Object;
+  if (name == self) {
+    set_type(classinfo->name);
+    return classinfo->name;
+  } else {
+    Symbol idType = symtab->lookup(name);
+    Symbol effe_idType = idType;
+    if (idType == NULL)
+    {
+      classtable->semant_error(classinfo->class_, this) << "type checking failed on object expression in class "
+                                                        << classinfo->name->get_string() << ": undefined objectid "
+                                                        << name->get_string() << std::endl;
+      effe_idType = Object;
+    }
+    set_type(effe_idType);
+    return effe_idType;
   }
-  set_type(effe_idType);
-  return effe_idType;
 }
 
 ////////////////////////////////////////////////////////////////////
