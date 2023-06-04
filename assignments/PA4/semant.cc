@@ -664,7 +664,7 @@ Symbol least_upper_bound(ClassTable *classtable, Symbol type1, Symbol type2)
   List<Entry> *chain2 = build_class_chain(classtable, type2);
   Symbol lub = Object;
   for (int i = list_first(chain1);
-       list_nth(chain1, i) == list_nth(chain2, i) && list_more(chain1, i) && list_more(chain2, i);
+       list_more(chain1, i) && list_more(chain2, i) && list_nth(chain1, i) == list_nth(chain2, i);
        i = list_next(chain1, i))
   {
     lub = list_nth(chain1, i);
@@ -1189,7 +1189,9 @@ void program_class::semant()
   /* ClassTable constructor may do some semantic analysis */
   ClassTable *classtable = new ClassTable(classes);
 
-  /* semantic analysis on names */
+  if (semant_debug) {
+    cerr << "Start checking unique var names." << endl;
+  }
   classtable->check_unique_var();
   if (classtable->errors())
   {
@@ -1197,7 +1199,9 @@ void program_class::semant()
     exit(1);
   }
 
-  /* semantic analysis on class inheritance cycles */
+  if (semant_debug) {
+    cerr << "Start checking cycles in class inheritance tree." << endl;
+  }
   classtable->check_class_hierarchy();
   if (classtable->errors())
   {
@@ -1205,12 +1209,18 @@ void program_class::semant()
     exit(1);
   }
 
-  /* semantic analysis on types */
+  if (semant_debug) {
+    cerr << "Start checking cycles in class attribute/method inheritance type consistency." << endl;
+  }
   classtable->check_type_hierarchy();
   if (classtable->errors())
   {
     cerr << "Compilation halted due to static semantic errors." << endl;
     exit(1);
+  }
+
+  if (semant_debug) {
+    cerr << "Start checking expression types." << endl;
   }
   check_type(classtable);
   if (classtable->errors())
