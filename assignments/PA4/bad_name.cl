@@ -26,21 +26,11 @@ class H {
   z(w: Int, w: Int): Int { w+w };
 };
 
-(* cycle *)
-class I inherits J {};
-class J inherits K {};
-class K inherits L {};
-class M inherits L {};
-class L inherits I {};
-
-(* cycle *)
-class N inherits N {};
-
 (* duplicate class name *)
-class O {};
-class O {
+class I {};
+class I {
   x: Int;
 };
 
 (* undefined parent *)
-class P inherits X {};
+class J inherits X {};

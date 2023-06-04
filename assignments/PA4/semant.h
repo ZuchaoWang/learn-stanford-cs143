@@ -107,7 +107,7 @@ template<class T>
 T* list_nth(List<T> *l, int n) {
   assert(l != NULL);
   if (n == 0) return l->hd();
-  else return list_nth(l->tail(), n-1);
+  else return list_nth(l->tl(), n-1);
 }
 
 #endif
