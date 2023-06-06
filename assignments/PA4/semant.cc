@@ -379,6 +379,21 @@ void ClassTable::check_unique_var()
   check_unique_formal();
 }
 
+void ClassTable::check_class_self_type() {
+  for (int i = list_first(classInfos); list_more(classInfos, i); i = list_next(classInfos, i))
+  {
+    ClassInfo *ci = list_nth(classInfos, i);
+    if (ci->name == SELF_TYPE)
+    {
+      semant_error(ci->class_) << "class name should not be SELF_TYPE"<< std::endl;
+    }
+    if (ci->parent == SELF_TYPE)
+    {
+      semant_error(ci->class_) << "class parent name should not be SELF_TYPE"<< std::endl;
+    }
+  }
+}
+
 void ClassTable::check_class_hierarchy()
 {
   check_class_parent_exist();
@@ -658,7 +673,20 @@ List<Entry> *build_class_chain(ClassTable *classtable, Symbol type)
   return chain;
 }
 
-Symbol least_upper_bound(ClassTable *classtable, Symbol type1, Symbol type2)
+Symbol least_upper_bound(ClassTable *classtable, Symbol selftype, Symbol type1, Symbol type2)
+{
+  if(type1 == SELF_TYPE && type2 == SELF_TYPE) {
+    return SELF_TYPE;
+  } else if (type1 == SELF_TYPE && type2 != SELF_TYPE) {
+    return least_upper_bound_no_self(classtable, selftype, type2);
+  } else if (type1 != SELF_TYPE && type2 == SELF_TYPE) {
+    return least_upper_bound_no_self(classtable, type1, selftype);
+  } else {
+    return least_upper_bound_no_self(classtable, type1, type2);
+  }
+}
+
+Symbol least_upper_bound_no_self(ClassTable *classtable, Symbol type1, Symbol type2)
 {
   List<Entry> *chain1 = build_class_chain(classtable, type1);
   List<Entry> *chain2 = build_class_chain(classtable, type2);
@@ -672,7 +700,20 @@ Symbol least_upper_bound(ClassTable *classtable, Symbol type1, Symbol type2)
   return lub;
 }
 
-bool is_subtype(ClassTable *classtable, Symbol type1, Symbol type2)
+bool is_subtype(ClassTable *classtable, Symbol selftype, Symbol type1, Symbol type2)
+{
+  if(type1 == SELF_TYPE && type2 == SELF_TYPE) {
+    return true;
+  } else if (type1 == SELF_TYPE && type2 != SELF_TYPE) {
+    return is_subtype_no_self(classtable, selftype, type2);
+  } else if (type1 != SELF_TYPE && type2 == SELF_TYPE) {
+    return false;
+  } else {
+    return is_subtype_no_self(classtable, type1, type2);
+  }
+}
+
+bool is_subtype_no_self(ClassTable *classtable, Symbol type1, Symbol type2)
 {
   for (ClassInfo *ci = classtable->find_class_info_by_name_symbol(type1);
        ci != NULL;
@@ -715,7 +756,7 @@ void class__class::check_type(ClassTable *classtable)
 void attr_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
   Symbol effe_type_decl = type_decl;
-  if (classtable->find_class_info_by_name_symbol(type_decl) == NULL)
+  if (type_decl != SELF_TYPE && classtable->find_class_info_by_name_symbol(type_decl) == NULL)
   {
     classtable->semant_error(classinfo->class_, this) << "type checking failed on attribute type: "
                                                       << classinfo->name->get_string() << "::" << name->get_string()
@@ -725,7 +766,7 @@ void attr_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Symbol
   symtab->enterscope();
   Symbol initType = init->check_type(classtable, classinfo, symtab);
   symtab->exitscope();
-  if (initType != No_type && initType != effe_type_decl)
+  if (initType != No_type && is_subtype(classtable, classinfo->name, initType, effe_type_decl) == false)
   {
     classtable->semant_error(classinfo->class_, this) << "type checking failed on attribute initializer: "
                                                       << classinfo->name->get_string() << "::" << name->get_string()
@@ -737,7 +778,7 @@ void attr_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Symbol
 void method_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
   Symbol effe_return_type = return_type;
-  if (classtable->find_class_info_by_name_symbol(return_type) == NULL)
+  if (return_type != SELF_TYPE && classtable->find_class_info_by_name_symbol(return_type) == NULL)
   {
     classtable->semant_error(classinfo->class_, this) << "type checking failed on method return type: "
                                                       << classinfo->name->get_string() << "::" << name->get_string()
@@ -761,7 +802,14 @@ void method_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Symb
 void formal_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Symbol methodName, SymbolTable<Symbol, Entry> *symtab)
 {
   Symbol effe_type_decl = type_decl;
-  if (classtable->find_class_info_by_name_symbol(type_decl) == NULL)
+  if (type_decl == SELF_TYPE) {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on formal type: "
+                                                      << classinfo->name->get_string() << "::" << methodName->get_string()
+                                                      << "::" << name->get_string()
+                                                      << ", SELF_TYPE " << type_decl->get_string();
+    effe_type_decl = Object;
+  }
+  else if (classtable->find_class_info_by_name_symbol(type_decl) == NULL)
   {
     classtable->semant_error(classinfo->class_, this) << "type checking failed on formal type: "
                                                       << classinfo->name->get_string() << "::" << methodName->get_string()
@@ -775,7 +823,7 @@ void formal_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Symb
 Symbol branch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
   Symbol effe_type_decl = type_decl;
-  if (classtable->find_class_info_by_name_symbol(type_decl) == NULL)
+  if (type_decl != SELF_TYPE && classtable->find_class_info_by_name_symbol(type_decl) == NULL)
   {
     classtable->semant_error(classinfo->class_, this) << "type checking failed on branch in class "
                                                       << classinfo->name->get_string()
@@ -815,12 +863,18 @@ Symbol assign_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Sy
 Symbol static_dispatch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
   Symbol exprType = expr->check_type(classtable, classinfo, symtab);
-  if (is_subtype(classtable, exprType, type_name) == false)
+  if (is_subtype(classtable, classinfo->name, exprType, type_name) == false)
   {
     classtable->semant_error(classinfo->class_, this) << "type checking failed on static dispatch expression in class "
                                                       << classinfo->name->get_string() << ": "
                                                       << "expr type " << exprType->get_string()
                                                       << "is not a subtype of " << type_name->get_string() << std::endl;
+    return Object;
+  }
+  if (type_name == SELF_TYPE) {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on static dispatch expression in class "
+                                                      << classinfo->name->get_string() << ": "
+                                                      << "type_name cannot be SELF_TYPE " << exprType->get_string() << std::endl;
     return Object;
   }
   ClassInfo *ci = classtable->find_class_info_by_name_symbol(type_name);
@@ -853,7 +907,7 @@ Symbol static_dispatch_class::check_type(ClassTable *classtable, ClassInfo *clas
   {
     Symbol argType = actual->nth(i)->check_type(classtable, classinfo, symtab);
     FormalInfo *fi = list_nth(fl, i);
-    if (is_subtype(classtable, argType, fi->type) == false)
+    if (is_subtype(classtable, classinfo->name, argType, fi->type) == false)
     {
       classtable->semant_error(classinfo->class_, this) << "type checking failed on static dispatch expression in class "
                                                         << classinfo->name->get_string() << ": "
@@ -862,8 +916,12 @@ Symbol static_dispatch_class::check_type(ClassTable *classtable, ClassInfo *clas
                                                         << fi->type->get_string() << " , actual type " << argType->get_string() << std::endl;
     }
   }
-  set_type(mi->retType);
-  return mi->retType;
+  Symbol effe_retType = mi->retType;
+  if (mi->retType == SELF_TYPE) {
+    effe_retType = ci->name;
+  }
+  set_type(effe_retType);
+  return effe_retType;
 }
 
 Symbol dispatch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
@@ -899,7 +957,7 @@ Symbol dispatch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, 
   {
     Symbol argType = actual->nth(i)->check_type(classtable, classinfo, symtab);
     FormalInfo *fi = list_nth(fl, i);
-    if (is_subtype(classtable, argType, fi->type) == false)
+    if (is_subtype(classtable, classinfo->name, argType, fi->type) == false)
     {
       classtable->semant_error(classinfo->class_, this) << "type checking failed on dispatch expression in class "
                                                         << classinfo->name->get_string() << ": "
@@ -923,7 +981,7 @@ Symbol cond_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Symb
   }
   Symbol thenType = then_exp->check_type(classtable, classinfo, symtab);
   Symbol elseType = else_exp->check_type(classtable, classinfo, symtab);
-  return least_upper_bound(classtable, thenType, elseType);
+  return least_upper_bound(classtable, classinfo->name, thenType, elseType);
 }
 
 Symbol loop_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
@@ -946,7 +1004,7 @@ Symbol typcase_class::check_type(ClassTable *classtable, ClassInfo *classinfo, S
   int i0 = cases->first();
   Symbol retType = cases->nth(i0)->check_type(classtable, classinfo, symtab);
   for (int i = cases->next(i0); cases->more(i); i = cases->next(i))
-    retType = least_upper_bound(classtable, retType, cases->nth(i)->check_type(classtable, classinfo, symtab));
+    retType = least_upper_bound(classtable, classinfo->name, retType, cases->nth(i)->check_type(classtable, classinfo, symtab));
   set_type(retType);
   return retType;
 }
@@ -963,7 +1021,7 @@ Symbol block_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Sym
 Symbol let_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
   Symbol effe_type_decl = type_decl;
-  if (classtable->find_class_info_by_name_symbol(type_decl) == NULL)
+  if (type_decl != SELF_TYPE && classtable->find_class_info_by_name_symbol(type_decl) == NULL)
   {
     classtable->semant_error(classinfo->class_, this) << "type checking failed on let expression in class "
                                                       << classinfo->name->get_string()
@@ -973,7 +1031,7 @@ Symbol let_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Symbo
   symtab->enterscope();
   symtab->addid(identifier, effe_type_decl);
   Symbol initType = init->check_type(classtable, classinfo, symtab);
-  if (initType != No_type && initType != effe_type_decl)
+  if (initType != No_type && is_subtype(classtable, classinfo->name, initType, effe_type_decl) == false)
   {
     classtable->semant_error(classinfo->class_, this) << "type checking failed on let expression in class "
                                                       << classinfo->name->get_string()
@@ -991,14 +1049,14 @@ Symbol check_type_binary_operation(Expression_class *e, Expression_class *e1, Ex
                                    ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
   Symbol e1Type = e1->check_type(classtable, classinfo, symtab);
-  if (e1Type != operandType)
+  if (is_subtype(classtable, classinfo->name, e1Type, operandType) == false)
   {
     classtable->semant_error(classinfo->class_, e) << "type checking failed on " << expr_name << " expression in class "
                                                    << classinfo->name->get_string() << ": "
                                                    << "operand type is " << e1Type->get_string() << std::endl;
   }
   Symbol e2Type = e2->check_type(classtable, classinfo, symtab);
-  if (e2Type != operandType)
+  if (is_subtype(classtable, classinfo->name, e2Type, operandType) == false)
   {
     classtable->semant_error(classinfo->class_, e) << "type checking failed on " << expr_name << " expression in class "
                                                    << classinfo->name->get_string() << ": "
@@ -1013,7 +1071,7 @@ Symbol check_type_unary_operation(Expression_class *e, Expression_class *e1,
                                   ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
   Symbol e1Type = e1->check_type(classtable, classinfo, symtab);
-  if (e1Type != operandType)
+  if (is_subtype(classtable, classinfo->name, e1Type, operandType) == false)
   {
     classtable->semant_error(classinfo->class_, e) << "type checking failed on " << expr_name << " expression in class "
                                                    << classinfo->name->get_string() << ": "
@@ -1089,7 +1147,7 @@ Symbol string_const_class::check_type(ClassTable *classtable, ClassInfo *classin
 Symbol new__class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
   Symbol effe_type_name = type_name;
-  if (classtable->find_class_info_by_name_symbol(type_name) == NULL)
+  if (type_name != SELF_TYPE && classtable->find_class_info_by_name_symbol(type_name) == NULL)
   {
     classtable->semant_error(classinfo->class_, this) << "type checking failed on new expression in class "
                                                       << classinfo->name->get_string() << ": undefined class "
@@ -1115,8 +1173,8 @@ Symbol no_expr_class::check_type(ClassTable *classtable, ClassInfo *classinfo, S
 Symbol object_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
   if (name == self) {
-    set_type(classinfo->name);
-    return classinfo->name;
+    set_type(SELF_TYPE);
+    return SELF_TYPE;
   } else {
     Symbol idType = symtab->lookup(name);
     Symbol effe_idType = idType;
@@ -1193,6 +1251,16 @@ void program_class::semant()
     cerr << "Start checking unique var names." << endl;
   }
   classtable->check_unique_var();
+  if (classtable->errors())
+  {
+    cerr << "Compilation halted due to static semantic errors." << endl;
+    exit(1);
+  }
+
+  if (semant_debug) {
+    cerr << "Start checking class name not SELF_TYPE." << endl;
+  }
+  classtable->check_class_self_type();
   if (classtable->errors())
   {
     cerr << "Compilation halted due to static semantic errors." << endl;

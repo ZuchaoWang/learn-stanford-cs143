@@ -49,9 +49,9 @@ public:
   ostream& semant_error(Symbol filename, tree_node *t);
 
   void check_unique_var(); /* name of class, attr, method, formals must be unique */
+  void check_class_self_type(); /* name of class cannot be SELF_TYPE */
   void check_class_hierarchy(); /* parent must be defined, and no cycle */
-  void check_type_hierarchy(); /* child redefinition of attr and method must be consistent with parent */
-  void check_type_expression(); /* attr initializer and method body must be type consistent */
+  void check_type_hierarchy(); /* child redefinition of attr and method must have same type with parent */
 
   ClassInfo* find_class_info_by_name_symbol(Symbol name);
   AttrInfo* find_attr_info_by_name_symbol(ClassInfo* classinfo, Symbol name);
@@ -74,9 +74,11 @@ public:
     int detectCycle(); // return the index of vertex in cycle, or -1 if acyclic
 };
 
+// consistency means same name and types
 bool check_attr_info_consistency(AttrInfo* attrinfo1, AttrInfo* attrinfo2);
 bool check_method_info_consistency(MethodInfo* methodinfo1, MethodInfo* methodinfo2);
 bool check_formal_info_consistency(FormalInfo *formalinfo1, FormalInfo *formalinfo2);
+
 void add_attr_infos_to_symtab(List<AttrInfo> *attrinfos, SymbolTable<Symbol, Entry> *map);
 Symbol check_type_binary_operation(Expression_class* e, Expression_class* e1, Expression_class* e2,
   char* expr_name, Symbol operandType, Symbol resultType,
@@ -84,8 +86,11 @@ Symbol check_type_binary_operation(Expression_class* e, Expression_class* e1, Ex
 Symbol check_type_unary_operation(Expression_class* e, Expression_class* e1,
   char* expr_name, Symbol operandType, Symbol resultType,
   ClassTable* classtable, ClassInfo* classinfo, SymbolTable<Symbol,Entry>* symtab);
-Symbol least_upper_bound(ClassTable* classtable, Symbol type1, Symbol type2);
-bool is_subtype(ClassTable* classtable, Symbol type1, Symbol type2);
+
+Symbol least_upper_bound(ClassTable* classtable, Symbol selftype, Symbol type1, Symbol type2);
+bool is_subtype(ClassTable* classtable, Symbol selftype, Symbol type1, Symbol type2);
+Symbol least_upper_bound_no_self(ClassTable* classtable, Symbol type1, Symbol type2);
+bool is_subtype_no_self(ClassTable* classtable, Symbol type1, Symbol type2);
 List<Entry>* build_class_chain(ClassTable* classtable, Symbol type); // parent to child, start from Object
 
 template<class T>
