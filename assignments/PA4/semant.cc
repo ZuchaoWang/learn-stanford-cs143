@@ -863,18 +863,18 @@ Symbol assign_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Sy
 Symbol static_dispatch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
   Symbol exprType = expr->check_type(classtable, classinfo, symtab);
+  if (type_name == SELF_TYPE) {
+    classtable->semant_error(classinfo->class_, this) << "type checking failed on static dispatch expression in class "
+                                                      << classinfo->name->get_string() << ": "
+                                                      << "type_name cannot be SELF_TYPE " << exprType->get_string() << std::endl;
+    return Object;
+  }
   if (is_subtype(classtable, classinfo->name, exprType, type_name) == false)
   {
     classtable->semant_error(classinfo->class_, this) << "type checking failed on static dispatch expression in class "
                                                       << classinfo->name->get_string() << ": "
                                                       << "expr type " << exprType->get_string()
                                                       << "is not a subtype of " << type_name->get_string() << std::endl;
-    return Object;
-  }
-  if (type_name == SELF_TYPE) {
-    classtable->semant_error(classinfo->class_, this) << "type checking failed on static dispatch expression in class "
-                                                      << classinfo->name->get_string() << ": "
-                                                      << "type_name cannot be SELF_TYPE " << exprType->get_string() << std::endl;
     return Object;
   }
   ClassInfo *ci = classtable->find_class_info_by_name_symbol(type_name);
@@ -918,7 +918,7 @@ Symbol static_dispatch_class::check_type(ClassTable *classtable, ClassInfo *clas
   }
   Symbol effe_retType = mi->retType;
   if (mi->retType == SELF_TYPE) {
-    effe_retType = ci->name;
+    effe_retType = exprType;
   }
   set_type(effe_retType);
   return effe_retType;
@@ -927,13 +927,16 @@ Symbol static_dispatch_class::check_type(ClassTable *classtable, ClassInfo *clas
 Symbol dispatch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
   Symbol exprType = expr->check_type(classtable, classinfo, symtab);
-  ClassInfo *ci = classtable->find_class_info_by_name_symbol(exprType);
-  if (ci == NULL)
-  {
-    classtable->semant_error(classinfo->class_, this) << "type checking failed on dispatch expression in class "
-                                                      << classinfo->name->get_string() << ": "
-                                                      << "expr type undefined " << exprType->get_string() << std::endl;
-    return Object;
+  ClassInfo *ci = classinfo;
+  if (exprType != SELF_TYPE) {
+    ci = classtable->find_class_info_by_name_symbol(exprType);
+    if (ci == NULL)
+    {
+      classtable->semant_error(classinfo->class_, this) << "type checking failed on dispatch expression in class "
+                                                        << classinfo->name->get_string() << ": "
+                                                        << "expr type undefined " << exprType->get_string() << std::endl;
+      return Object;
+    }
   }
   MethodInfo *mi = classtable->recfind_method_info_by_name_symbol(ci, name);
   if (mi == NULL)
@@ -966,8 +969,12 @@ Symbol dispatch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, 
                                                         << fi->type->get_string() << " , actual type " << argType->get_string() << std::endl;
     }
   }
-  set_type(mi->retType);
-  return mi->retType;
+  Symbol effe_retType = mi->retType;
+  if (mi->retType == SELF_TYPE) {
+    effe_retType = exprType;
+  }
+  set_type(effe_retType);
+  return effe_retType;
 }
 
 Symbol cond_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
