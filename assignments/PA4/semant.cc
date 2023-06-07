@@ -851,7 +851,7 @@ Symbol assign_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Sy
     effe_idType = Object;
   }
   Symbol exprType = expr->check_type(classtable, classinfo, symtab);
-  if (exprType != effe_idType)
+  if (is_subtype(classtable, classinfo->name, exprType, effe_idType) == false)
   {
     classtable->semant_error(classinfo->class_, this) << "type checking failed on assign expression in class "
                                                       << classinfo->name->get_string()
@@ -982,7 +982,7 @@ Symbol dispatch_class::check_type(ClassTable *classtable, ClassInfo *classinfo, 
 Symbol cond_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
   Symbol predType = pred->check_type(classtable, classinfo, symtab);
-  if (predType != Bool)
+  if (is_subtype(classtable, classinfo->name, predType, Bool) == false)
   {
     classtable->semant_error(classinfo->class_, this) << "type checking failed on cond expression in class "
                                                       << classinfo->name->get_string() << ": "
@@ -998,7 +998,7 @@ Symbol cond_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Symb
 Symbol loop_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
   Symbol predType = pred->check_type(classtable, classinfo, symtab);
-  if (predType != Bool)
+  if (is_subtype(classtable, classinfo->name, predType, Bool) == false)
   {
     classtable->semant_error(classinfo->class_, this) << "type checking failed on loop expression in class "
                                                       << classinfo->name->get_string() << ": "
