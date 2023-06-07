@@ -790,7 +790,7 @@ void method_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Symb
     formals->nth(i)->check_type(classtable, classinfo, name, symtab);
   Symbol exprType = expr->check_type(classtable, classinfo, symtab);
   symtab->exitscope();
-  if (exprType != effe_return_type)
+  if (is_subtype(classtable, classinfo->name, exprType, effe_return_type) == false)
   {
     classtable->semant_error(classinfo->class_, this) << "type checking failed on method body type: "
                                                       << classinfo->name->get_string() << "::" << name->get_string()
