@@ -329,7 +329,7 @@ AttrInfo *ClassTable::recfind_attr_info_by_name_symbol(ClassInfo *classinfo, Sym
   }
   else
   {
-    if (classinfo->parent == No_class)
+    if (classinfo->name == Object)
     {
       return NULL;
     }
@@ -338,9 +338,10 @@ AttrInfo *ClassTable::recfind_attr_info_by_name_symbol(ClassInfo *classinfo, Sym
       ClassInfo *parentclassinfo = find_class_info_by_name_symbol(classinfo->parent);
       if (parentclassinfo == NULL)
       {
+        // parent existence should already been checked
         assert(parentclassinfo != NULL);
       };
-      return find_attr_info_by_name_symbol(parentclassinfo, name);
+      return recfind_attr_info_by_name_symbol(parentclassinfo, name);
     }
   }
 }
@@ -355,7 +356,7 @@ MethodInfo *ClassTable::recfind_method_info_by_name_symbol(ClassInfo *classinfo,
   }
   else
   {
-    if (classinfo->parent == No_class)
+    if (classinfo->name == Object)
     {
       return NULL;
     }
@@ -364,9 +365,10 @@ MethodInfo *ClassTable::recfind_method_info_by_name_symbol(ClassInfo *classinfo,
       ClassInfo *parentclassinfo = find_class_info_by_name_symbol(classinfo->parent);
       if (parentclassinfo == NULL)
       {
+        // parent existence should already been checked
         assert(parentclassinfo != NULL);
       };
-      return find_method_info_by_name_symbol(parentclassinfo, name);
+      return recfind_method_info_by_name_symbol(parentclassinfo, name);
     }
   }
 }
