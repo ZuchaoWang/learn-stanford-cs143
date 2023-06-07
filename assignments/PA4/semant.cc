@@ -990,7 +990,9 @@ Symbol cond_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Symb
   }
   Symbol thenType = then_exp->check_type(classtable, classinfo, symtab);
   Symbol elseType = else_exp->check_type(classtable, classinfo, symtab);
-  return least_upper_bound(classtable, classinfo->name, thenType, elseType);
+  Symbol retType = least_upper_bound(classtable, classinfo->name, thenType, elseType);
+  set_type(retType);
+  return retType;
 }
 
 Symbol loop_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
@@ -1122,7 +1124,7 @@ Symbol lt_class::check_type(ClassTable *classtable, ClassInfo *classinfo, Symbol
 
 Symbol eq_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
 {
-  return check_type_binary_operation(this, e1, e2, "eq", Int, Bool, classtable, classinfo, symtab);
+  return check_type_binary_operation(this, e1, e2, "eq", Object, Bool, classtable, classinfo, symtab);
 }
 
 Symbol leq_class::check_type(ClassTable *classtable, ClassInfo *classinfo, SymbolTable<Symbol, Entry> *symtab)
