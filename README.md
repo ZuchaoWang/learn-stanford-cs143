@@ -1,4 +1,3 @@
 # learn-stanford-cs143
-Stanford CS143 Compiler Assignment
 
-This code is extracted from the virtual machine, not copied from other github repos. This repo is meant to be editted in modern OS, then the code will be copied into the virtual machine (running old linux) for execution. This repo itself is not executable, since I have removed all the big files unrelated to editing, such as bin and lib and java stuff (I work on the C++ version). For an 
+This repository is for Stanford CS143 Compiler Course's Programming Assignment. The code is extracted from the [virtual machine](https://courses.edx.org/courses/course-v1:StanfordOnline+SOE.YCSCS1+2T2020/7b74698308574f3c89d2ed498f26a019/), not copied from other github repos. The code is meant to be editted in modern OS, then copied into the virtual machine (running old linux) for execution. This code in this repository itself is not executable, since I have removed all the big files that won't be edited, such as bin and lib and java stuff (I work on the C++ version).
