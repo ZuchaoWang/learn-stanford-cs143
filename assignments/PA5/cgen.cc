@@ -853,7 +853,7 @@ void CgenNode::add_attr_slot(attr_class* attr) {
     }
   }
   // if not found, add it
-  attr_slots = new List(new CgenNodeAttrSlot(list_length(attr_slots), attr->name), attr_slots);
+  attr_slots = new List<CgenNodeAttrSlot>(new CgenNodeAttrSlot(list_length(attr_slots), attr->name), attr_slots);
 }
 
 
@@ -866,7 +866,7 @@ void CgenNode::add_method_slot(method_class* method) {
     }
   }
   // if not found, add it
-  method_slots = new List(new CgenNodeMethodSlot(list_length(method_slots), method), method_slots);
+  method_slots = new List<CgenNodeMethodSlot>(new CgenNodeMethodSlot(list_length(method_slots), method), method_slots);
 }
 
 void CgenClassTable::code_classtags() {
