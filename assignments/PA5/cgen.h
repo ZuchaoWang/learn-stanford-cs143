@@ -45,7 +45,7 @@ private:
 
    void calculate_slots();
    void code_prototypes();
-   void code_classtags();
+   void code_classnametable();
 public:
    CgenClassTable(Classes, ostream& str);
    void code();

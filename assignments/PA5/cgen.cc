@@ -758,13 +758,13 @@ void CgenClassTable::install_class(CgenNodeP nd)
       return;
     }
 
+  // set classtag, required to call install_class in certain way
+  nd->set_classtag(list_length(nds));
+
   // The class name is legal, so add it to the list of classes
   // and the symbol table.
   nds = new List<CgenNode>(nd,nds);
   addid(name,nd);
-
-  // set classtag, required to call install_class in certain way
-  nd->set_classtag(list_length(nds));
 }
 
 void CgenClassTable::install_classes(Classes cs)
@@ -861,8 +861,17 @@ void CgenClassTable::code_prototypes() {
       l->hd()->code_prototype_def(str);
 }
 
-void CgenClassTable::code_classtags() {
-
+void CgenClassTable::code_classnametable() {
+  str << CLASSNAMETAB << LABEL;
+  int class_count = list_length(nds);
+  CgenNode** nodes = new CgenNode*[class_count];
+  for(List<CgenNode> *l = nds; l; l = l->tl())
+    nodes[l->hd()->get_classtag()] = l->hd();
+  for(int i = 0; i < class_count; i++) {
+    CgenNode* node = nodes[i];
+    str << WORD; stringtable.add_string(node->get_name()->get_string())->code_ref(str); str<<endl;
+  }
+  delete[] nodes;
 }
 
 void CgenClassTable::code()
@@ -878,6 +887,9 @@ void CgenClassTable::code()
 
   if (cgen_debug) cout << "coding prototypes" << endl;
   code_prototypes();
+
+  if (cgen_debug) cout << "coding classnames" << endl;
+  code_classnametable();
 
 //                 Add your code to emit
 //                   - prototype objects
