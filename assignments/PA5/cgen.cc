@@ -874,6 +874,11 @@ void CgenClassTable::code_classnametable() {
   delete[] nodes;
 }
 
+void CgenClassTable::code_dispatch_tables() {
+  for(List<CgenNode> *l = nds; l; l = l->tl())
+      l->hd()->code_dispatch_table_def(str);
+}
+
 void CgenClassTable::code()
 {
   if (cgen_debug) cout << "coding global data" << endl;
@@ -891,11 +896,8 @@ void CgenClassTable::code()
   if (cgen_debug) cout << "coding classnames" << endl;
   code_classnametable();
 
-//                 Add your code to emit
-//                   - prototype objects
-//                   - class_nameTab
-//                   - dispatch tables
-//
+  if (cgen_debug) cout << "coding dispatch_tables" << endl;
+  code_dispatch_tables();
 
   if (cgen_debug) cout << "coding global text" << endl;
   code_global_text();
@@ -942,7 +944,18 @@ void CgenNode::code_init_ref(ostream &s) {
 }
 
 void CgenNode::code_dispatch_table_def(ostream &s) {
+  int method_len = list_length(method_slots);
 
+  code_dispatch_table_ref(s);  s << LABEL;
+
+  method_class** methods = new method_class*[method_len]; // create array of method_class pointers
+  for (List<CgenNodeMethodSlot> *l=method_slots; l; l=l->tl()) {
+    methods[l->hd()->offset] = l->hd()->method;
+  }
+  for (int i=0; i<method_len; i++) {
+    s << WORD << name->get_string() << METHOD_SEP << methods[i]->name << endl;
+  }
+  delete[] methods;
 }
 
 void CgenNode::code_dispatch_table_ref(ostream &s) {
