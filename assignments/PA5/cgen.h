@@ -54,15 +54,21 @@ public:
 class CgenNodeAttrSlot {
 public:
    int offset;
-   Symbol attr;
-   CgenNodeAttrSlot(int offset, Symbol attr);
+   Symbol name;
+   CgenNodeAttrSlot(int _offset, Symbol _name) {
+     offset = _offset;
+     name = _name;
+   }
 };
 
 class CgenNodeMethodSlot {
 public:
    int offset;
    method_class *method;                      
-   CgenNodeMethodSlot(int offset, method_class *method);
+   CgenNodeMethodSlot(int _offset, method_class *_method) {
+    offset = _offset;
+    method = _method;
+   }
 };
 
 class CgenNode : public class__class {
@@ -90,6 +96,8 @@ public:
    void set_classtag(int tag) { classtag = tag; }
    int get_classtag() { return classtag; }
    void calculate_slots();
+   void add_attr_slot(attr_class* attr);
+   void add_method_slot(method_class* method);
    void code_init_def(ostream &s);
    void code_init_ref(ostream &s);
    void code_dispatch_table_def(ostream &s);

@@ -726,7 +726,7 @@ void CgenClassTable::install_basic_classes()
 
 //
 // The class Str has a number of slots and operations:
-//       val                                  ???
+//       val                                  ??? the string length ?
 //       str_field                            the string itself
 //       length() : Int                       length of the string
 //       concat(arg: Str) : Str               string concatenation
@@ -834,8 +834,43 @@ void CgenNode::calculate_slots() {
     Features fs = l->hd()->features;
     for (int i=fs->first(); fs->more(i); i=fs->next(i)) {
       Feature f = fs->nth(i);
+      if (dynamic_cast<attr_class*>(f)) {
+        // handle attribute
+        add_attr_slot(dynamic_cast<attr_class*>(f));
+      } else {
+        // handle method
+        add_method_slot(dynamic_cast<method_class*>(f));
+      }
     }
   }
+}
+
+void CgenNode::add_attr_slot(attr_class* attr) {
+  // search for attr, if found, return
+  for (List<CgenNodeAttrSlot> *l=attr_slots; l; l=l->tl()) {
+    if (l->hd()->name == attr->name) {
+      return;
+    }
+  }
+  // if not found, add it
+  attr_slots = new List(new CgenNodeAttrSlot(list_length(attr_slots), attr->name), attr_slots);
+}
+
+
+void CgenNode::add_method_slot(method_class* method) {
+  // search for method, if found, replace and return
+  for (List<CgenNodeMethodSlot> *l=method_slots; l; l=l->tl()) {
+    if (l->hd()->method->name == method->name) {
+      l->hd()->method = method;
+      return;
+    }
+  }
+  // if not found, add it
+  method_slots = new List(new CgenNodeMethodSlot(list_length(method_slots), method), method_slots);
+}
+
+void CgenClassTable::code_classtags() {
+
 }
 
 void CgenClassTable::code()
@@ -889,6 +924,30 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTableP ct) :
 { 
    stringtable.add_string(name->get_string());          // Add class name to string table
    classtable = ct;
+}
+
+void CgenNode::code_init_def(ostream &s) {
+
+}
+
+void CgenNode::code_init_ref(ostream &s) {
+
+}
+
+void CgenNode::code_dispatch_table_def(ostream &s) {
+
+}
+
+void CgenNode::code_dispatch_table_ref(ostream &s) {
+
+}
+
+void CgenNode::code_prototype_def(ostream &s) {
+
+}
+
+void CgenNode::code_prototype_ref(ostream &s) {
+
 }
 
 
