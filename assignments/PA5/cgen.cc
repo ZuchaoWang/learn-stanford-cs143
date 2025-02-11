@@ -619,15 +619,17 @@ void CgenClassTable::code_constants()
 
 CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s)
 {
-   stringclasstag = 0 /* Change to your String class tag here */;
-   intclasstag =    0 /* Change to your Int class tag here */;
-   boolclasstag =   0 /* Change to your Bool class tag here */;
-
    enterscope();
    if (cgen_debug) cout << "Building CgenClassTable" << endl;
    install_basic_classes();
    install_classes(classes);
+
+   intclasstag = probe(Int)->get_classtag();
+   boolclasstag = probe(Bool)->get_classtag();
+   stringclasstag = probe(Str)->get_classtag();
+
    build_inheritance_tree();
+   calculate_slots();
 
    code();
    exitscope();
@@ -773,6 +775,9 @@ void CgenClassTable::install_class(CgenNodeP nd)
   // and the symbol table.
   nds = new List<CgenNode>(nd,nds);
   addid(name,nd);
+
+  // set classtag, required to call install_class in certain way
+  nd->set_classtag(list_length(nds));
 }
 
 void CgenClassTable::install_classes(Classes cs)
@@ -815,7 +820,23 @@ void CgenNode::set_parentnd(CgenNodeP p)
   parentnd = p;
 }
 
+void CgenClassTable::calculate_slots() {
+    for(List<CgenNode> *l = nds; l; l = l->tl())
+      l->hd()->calculate_slots();
+}
 
+void CgenNode::calculate_slots() {
+  List<CgenNode>* ancesters = NULL;
+  for (CgenNodeP p = this; p->get_name() != No_class; p = p->get_parentnd()) {
+    ancesters = new List<CgenNode>(p, ancesters);
+  }
+  for (List<CgenNode> *l = ancesters; l; l = l->tl()) {
+    Features fs = l->hd()->features;
+    for (int i=fs->first(); fs->more(i); i=fs->next(i)) {
+      Feature f = fs->nth(i);
+    }
+  }
+}
 
 void CgenClassTable::code()
 {
@@ -861,9 +882,13 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTableP ct) :
    class__class((const class__class &) *nd),
    parentnd(NULL),
    children(NULL),
-   basic_status(bstatus)
+   basic_status(bstatus),
+   attr_slots(NULL),
+   method_slots(NULL),
+   classtag(-1)
 { 
    stringtable.add_string(name->get_string());          // Add class name to string table
+   classtable = ct;
 }
 
 

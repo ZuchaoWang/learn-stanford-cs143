@@ -42,12 +42,28 @@ private:
    void install_classes(Classes cs);
    void build_inheritance_tree();
    void set_relations(CgenNodeP nd);
+
+   void calculate_slots();
+   void code_classtags();
 public:
    CgenClassTable(Classes, ostream& str);
    void code();
    CgenNodeP root();
 };
 
+class CgenNodeAttrSlot {
+public:
+   int offset;
+   Symbol attr;
+   CgenNodeAttrSlot(int offset, Symbol attr);
+};
+
+class CgenNodeMethodSlot {
+public:
+   int offset;
+   method_class *method;                      
+   CgenNodeMethodSlot(int offset, method_class *method);
+};
 
 class CgenNode : public class__class {
 private: 
@@ -55,6 +71,10 @@ private:
    List<CgenNode> *children;                  // Children of class
    Basicness basic_status;                    // `Basic' if class is basic
                                               // `NotBasic' otherwise
+   List<CgenNodeAttrSlot> *attr_slots;        // Slots for attributes
+   List<CgenNodeMethodSlot> *method_slots;    // Slots for methods
+   int classtag;
+   CgenClassTableP classtable;                // Class table for this class
 
 public:
    CgenNode(Class_ c,
@@ -66,6 +86,16 @@ public:
    void set_parentnd(CgenNodeP p);
    CgenNodeP get_parentnd() { return parentnd; }
    int basic() { return (basic_status == Basic); }
+
+   void set_classtag(int tag) { classtag = tag; }
+   int get_classtag() { return classtag; }
+   void calculate_slots();
+   void code_init_def(ostream &s);
+   void code_init_ref(ostream &s);
+   void code_dispatch_table_def(ostream &s);
+   void code_dispatch_table_ref(ostream &s);
+   void code_prototype_def(ostream &s);
+   void code_prototype_ref(ostream &s);
 };
 
 class BoolConst 
