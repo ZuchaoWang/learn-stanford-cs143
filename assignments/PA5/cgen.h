@@ -44,6 +44,7 @@ private:
    void set_relations(CgenNodeP nd);
 
    void calculate_slots();
+   void code_prototypes();
    void code_classtags();
 public:
    CgenClassTable(Classes, ostream& str);
@@ -54,10 +55,10 @@ public:
 class CgenNodeAttrSlot {
 public:
    int offset;
-   Symbol name;
-   CgenNodeAttrSlot(int _offset, Symbol _name) {
+   attr_class *attr;
+   CgenNodeAttrSlot(int _offset, attr_class *_attr) {
      offset = _offset;
-     name = _name;
+     attr = _attr;
    }
 };
 

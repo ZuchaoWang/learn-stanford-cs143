@@ -399,12 +399,7 @@ void StringEntry::code_def(ostream& s, int stringclasstag)
   code_ref(s);  s  << LABEL                                             // label
       << WORD << stringclasstag << endl                                 // tag
       << WORD << (DEFAULT_OBJFIELDS + STRING_SLOTS + (len+4)/4) << endl // size
-      << WORD;
-
-
- /***** Add dispatch information for class String ******/
-
-      s << endl;                                              // dispatch table
+      << WORD << STRINGNAME << DISPTAB_SUFFIX << endl;                                              // dispatch table
       s << WORD;  lensym->code_ref(s);  s << endl;            // string length
   emit_string_constant(s,str);                                // ascii string
   s << ALIGN;                                                 // align to word
@@ -442,11 +437,7 @@ void IntEntry::code_def(ostream &s, int intclasstag)
   code_ref(s);  s << LABEL                                // label
       << WORD << intclasstag << endl                      // class tag
       << WORD << (DEFAULT_OBJFIELDS + INT_SLOTS) << endl  // object size
-      << WORD; 
-
- /***** Add dispatch information for class Int ******/
-
-      s << endl;                                          // dispatch table
+      << WORD << INTNAME << DISPTAB_SUFFIX << endl;                                             // dispatch table
       s << WORD << str << endl;                           // integer value
 }
 
@@ -486,11 +477,7 @@ void BoolConst::code_def(ostream& s, int boolclasstag)
   code_ref(s);  s << LABEL                                  // label
       << WORD << boolclasstag << endl                       // class tag
       << WORD << (DEFAULT_OBJFIELDS + BOOL_SLOTS) << endl   // object size
-      << WORD;
-
- /***** Add dispatch information for class Bool ******/
-
-      s << endl;                                            // dispatch table
+      << WORD << BOOLNAME << DISPTAB_SUFFIX << endl;                                           // dispatch table
       s << WORD << val << endl;                             // value (0 or 1)
 }
 
@@ -848,12 +835,12 @@ void CgenNode::calculate_slots() {
 void CgenNode::add_attr_slot(attr_class* attr) {
   // search for attr, if found, return
   for (List<CgenNodeAttrSlot> *l=attr_slots; l; l=l->tl()) {
-    if (l->hd()->name == attr->name) {
+    if (l->hd()->attr->name == attr->name) {
       return;
     }
   }
   // if not found, add it
-  attr_slots = new List<CgenNodeAttrSlot>(new CgenNodeAttrSlot(list_length(attr_slots), attr->name), attr_slots);
+  attr_slots = new List<CgenNodeAttrSlot>(new CgenNodeAttrSlot(list_length(attr_slots), attr), attr_slots);
 }
 
 
@@ -867,6 +854,11 @@ void CgenNode::add_method_slot(method_class* method) {
   }
   // if not found, add it
   method_slots = new List<CgenNodeMethodSlot>(new CgenNodeMethodSlot(list_length(method_slots), method), method_slots);
+}
+
+void CgenClassTable::code_prototypes() {
+  for(List<CgenNode> *l = nds; l; l = l->tl())
+      l->hd()->code_prototype_def(str);
 }
 
 void CgenClassTable::code_classtags() {
@@ -883,6 +875,9 @@ void CgenClassTable::code()
 
   if (cgen_debug) cout << "coding constants" << endl;
   code_constants();
+
+  if (cgen_debug) cout << "coding prototypes" << endl;
+  code_prototypes();
 
 //                 Add your code to emit
 //                   - prototype objects
@@ -931,7 +926,7 @@ void CgenNode::code_init_def(ostream &s) {
 }
 
 void CgenNode::code_init_ref(ostream &s) {
-
+  s << name->get_string() << CLASSINIT_SUFFIX;
 }
 
 void CgenNode::code_dispatch_table_def(ostream &s) {
@@ -939,15 +934,37 @@ void CgenNode::code_dispatch_table_def(ostream &s) {
 }
 
 void CgenNode::code_dispatch_table_ref(ostream &s) {
-
+  s << name->get_string() << DISPTAB_SUFFIX;
 }
 
 void CgenNode::code_prototype_def(ostream &s) {
+  int attr_len = list_length(attr_slots);
 
+  code_prototype_ref(s);  s << LABEL                                  // label
+  << WORD << classtag << endl                       // class tag
+  << WORD << (DEFAULT_OBJFIELDS + attr_len) << endl   // object size
+  << WORD; code_dispatch_table_ref(s);  s << endl;
+
+  attr_class** attrs = new attr_class*[attr_len]; // create array of attr_class pointers
+  for (List<CgenNodeAttrSlot> *l=attr_slots; l; l=l->tl()) {
+    attrs[l->hd()->offset] = l->hd()->attr;
+  }
+  for (int i=0; i<attr_len; i++) {
+    if (attrs[i]->type_decl == Bool) {
+      s << WORD; falsebool.code_ref(s); s << endl;
+    } else if (attrs[i]->type_decl == Int) {
+      s << WORD; inttable.add_string("0")->code_ref(s); s<<endl;
+    } else if (attrs[i]->type_decl == Str) {
+      s << WORD; stringtable.add_string("")->code_ref(s); s<<endl;
+    } else {
+      s << WORD << 0 << endl;
+    }
+  }
+  delete[] attrs;
 }
 
 void CgenNode::code_prototype_ref(ostream &s) {
-
+  s << name->get_string() << PROTOBJ_SUFFIX;
 }
 
 
