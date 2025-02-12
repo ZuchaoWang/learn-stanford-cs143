@@ -819,21 +819,22 @@ void CgenNode::calculate_feature_slots() {
     ancesters = new List<CgenNode>(p, ancesters);
   }
   for (List<CgenNode> *l = ancesters; l; l = l->tl()) {
-    Features fs = l->hd()->features;
+    CgenNodeP node = l->hd();
+    Features fs = node->features;
     for (int i=fs->first(); fs->more(i); i=fs->next(i)) {
       Feature f = fs->nth(i);
       if (dynamic_cast<attr_class*>(f)) {
         // handle attribute
-        add_attr_slot(dynamic_cast<attr_class*>(f));
+        add_attr_slot(dynamic_cast<attr_class*>(f), node);
       } else {
         // handle method
-        add_method_slot(dynamic_cast<method_class*>(f));
+        add_method_slot(dynamic_cast<method_class*>(f), node);
       }
     }
   }
 }
 
-void CgenNode::add_attr_slot(attr_class* attr) {
+void CgenNode::add_attr_slot(attr_class* attr, CgenNodeP source) {
   // search for attr, if found, return
   for (List<CgenNodeAttrSlot> *l=attr_slots; l; l=l->tl()) {
     if (l->hd()->attr->name == attr->name) {
@@ -841,20 +842,21 @@ void CgenNode::add_attr_slot(attr_class* attr) {
     }
   }
   // if not found, add it
-  attr_slots = new List<CgenNodeAttrSlot>(new CgenNodeAttrSlot(list_length(attr_slots), attr), attr_slots);
+  attr_slots = new List<CgenNodeAttrSlot>(new CgenNodeAttrSlot(list_length(attr_slots), attr, source), attr_slots);
 }
 
 
-void CgenNode::add_method_slot(method_class* method) {
+void CgenNode::add_method_slot(method_class* method, CgenNodeP source) {
   // search for method, if found, replace and return
   for (List<CgenNodeMethodSlot> *l=method_slots; l; l=l->tl()) {
     if (l->hd()->method->name == method->name) {
       l->hd()->method = method;
+      l->hd()->source = source;
       return;
     }
   }
   // if not found, add it
-  method_slots = new List<CgenNodeMethodSlot>(new CgenNodeMethodSlot(list_length(method_slots), method), method_slots);
+  method_slots = new List<CgenNodeMethodSlot>(new CgenNodeMethodSlot(list_length(method_slots), method, source), method_slots);
 }
 
 void CgenClassTable::count_local_vars() {
@@ -956,18 +958,18 @@ void CgenNode::code_init_ref(ostream &s) {
 }
 
 void CgenNode::code_dispatch_table_def(ostream &s) {
-  int method_len = list_length(method_slots);
+  int slot_num = list_length(method_slots);
 
   code_dispatch_table_ref(s);  s << LABEL;
 
-  method_class** methods = new method_class*[method_len]; // create array of method_class pointers
+  CgenNodeMethodSlot** slots = new CgenNodeMethodSlot*[slot_num]; // create array of method_class pointers
   for (List<CgenNodeMethodSlot> *l=method_slots; l; l=l->tl()) {
-    methods[l->hd()->offset] = l->hd()->method;
+    slots[l->hd()->offset] = l->hd();
   }
-  for (int i=0; i<method_len; i++) {
-    s << WORD << name->get_string() << METHOD_SEP << methods[i]->name << endl;
+  for (int i=0; i<slot_num; i++) {
+    s << WORD << slots[i]->source->name->get_string() << METHOD_SEP << slots[i]->method->name->get_string() << endl;
   }
-  delete[] methods;
+  delete[] slots;
 }
 
 void CgenNode::code_dispatch_table_ref(ostream &s) {
@@ -975,29 +977,29 @@ void CgenNode::code_dispatch_table_ref(ostream &s) {
 }
 
 void CgenNode::code_prototype_def(ostream &s) {
-  int attr_len = list_length(attr_slots);
+  int slot_num = list_length(attr_slots);
 
   code_prototype_ref(s);  s << LABEL                                  // label
   << WORD << classtag << endl                       // class tag
-  << WORD << (DEFAULT_OBJFIELDS + attr_len) << endl   // object size
+  << WORD << (DEFAULT_OBJFIELDS + slot_num) << endl   // object size
   << WORD; code_dispatch_table_ref(s);  s << endl;
 
-  attr_class** attrs = new attr_class*[attr_len]; // create array of attr_class pointers
+  CgenNodeAttrSlot** slots = new CgenNodeAttrSlot*[slot_num]; // create array of attr_class pointers
   for (List<CgenNodeAttrSlot> *l=attr_slots; l; l=l->tl()) {
-    attrs[l->hd()->offset] = l->hd()->attr;
+    slots[l->hd()->offset] = l->hd();
   }
-  for (int i=0; i<attr_len; i++) {
-    if (attrs[i]->type_decl == Bool) {
+  for (int i=0; i<slot_num; i++) {
+    if (slots[i]->attr->type_decl == Bool) {
       s << WORD; falsebool.code_ref(s); s << endl;
-    } else if (attrs[i]->type_decl == Int) {
+    } else if (slots[i]->attr->type_decl == Int) {
       s << WORD; inttable.add_string("0")->code_ref(s); s<<endl;
-    } else if (attrs[i]->type_decl == Str) {
+    } else if (slots[i]->attr->type_decl == Str) {
       s << WORD; stringtable.add_string("")->code_ref(s); s<<endl;
     } else {
       s << WORD << 0 << endl;
     }
   }
-  delete[] attrs;
+  delete[] slots;
 }
 
 void CgenNode::code_prototype_ref(ostream &s) {

@@ -69,19 +69,23 @@ class CgenNodeAttrSlot {
 public:
    int offset; // in terms of 4-byte words
    attr_class *attr;
-   CgenNodeAttrSlot(int _offset, attr_class *_attr) {
+   CgenNodeP source;
+   CgenNodeAttrSlot(int _offset, attr_class *_attr, CgenNodeP _source) {
      offset = _offset;
      attr = _attr;
+     source = _source;
    }
 };
 
 class CgenNodeMethodSlot {
 public:
    int offset; // in terms of 4-byte words
-   method_class *method;                      
-   CgenNodeMethodSlot(int _offset, method_class *_method) {
+   method_class *method;
+   CgenNodeP source;                      
+   CgenNodeMethodSlot(int _offset, method_class *_method, CgenNodeP _source) {
     offset = _offset;
     method = _method;
+    source = _source;
    }
 };
 
@@ -111,8 +115,8 @@ public:
    int get_classtag() { return classtag; }
    void calculate_feature_slots();
    void count_local_vars();
-   void add_attr_slot(attr_class* attr);
-   void add_method_slot(method_class* method);
+   void add_attr_slot(attr_class* attr, CgenNodeP source);
+   void add_method_slot(method_class* method, CgenNodeP source);
    void code_init_def(ostream &s);
    void code_init_ref(ostream &s);
    void code_dispatch_table_def(ostream &s);
