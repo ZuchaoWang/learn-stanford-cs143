@@ -965,23 +965,27 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTableP ct) :
 }
 
 void CgenNode::code_init_def(ostream &s) {
-  if (basic_status == Basic) return;
-
   code_init_ref(s); s << LABEL;
 
+  if (basic_status == Basic) {
+    // noop for basic classes
+    emit_return(s);
+    return;
+  }
+
   // entry
+  emit_push(FP, s);
   emit_move(FP, SP, s);
   emit_push(RA, s);
   emit_push(ACC, s);
 
   // call parent initializer
   if (parentnd != NULL && parentnd->basic_status != Basic) {
-    emit_push(FP, s);
     s << JAL; parentnd->code_init_ref(s); s << endl;
   }
 
   // call attr initializer defined in current class
-  emit_load(ACC, -4, FP, s);
+  emit_load(ACC, -1, FP, s);
   classtable->varscopes.enterscope();
   for (List<CgenNodeAttrSlot>* l=attr_slots; l; l=l->tl()) {
     classtable->varscopes.addid(l->hd()->attr->name, new CgenVarSlot(l->hd()->offset + DEFAULT_OBJFIELDS, true));
@@ -1078,11 +1082,15 @@ void CgenNode::code_methods_def(ostream &s) {
 }
 
 void CgenNode::code_method_def(method_class* method, ostream &s) {
-  if (basic_status == Basic) return;
+  if (basic_status == Basic) {
+    // skip basic classes
+    return;
+  }
 
   code_method_ref(method->name, s); s << LABEL;
 
   // entry
+  emit_push(FP, s);
   emit_move(FP, SP, s);
   emit_push(RA, s);
   emit_push(ACC, s);

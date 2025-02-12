@@ -15,7 +15,7 @@ class CgenNode;
 typedef CgenNode *CgenNodeP;
 
 class CgenVarSlot {
-  // AR will be: old FP, args, RA, saved a0, local vars, temporaries
+  // AR will be: args, old FP, RA, saved a0, local vars, temporaries
   // FP will point to RA
 public:
     int offset; // in terms of 4-byte words
