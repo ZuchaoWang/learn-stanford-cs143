@@ -1003,58 +1003,58 @@ void CgenNode::code_prototype_ref(ostream &s) {
 //
 //*****************************************************************
 
-void assign_class::code(ostream &s) {
+void assign_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void static_dispatch_class::code(ostream &s) {
+void static_dispatch_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void dispatch_class::code(ostream &s) {
+void dispatch_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void cond_class::code(ostream &s) {
+void cond_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void loop_class::code(ostream &s) {
+void loop_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void typcase_class::code(ostream &s) {
+void typcase_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void block_class::code(ostream &s) {
+void block_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void let_class::code(ostream &s) {
+void let_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void plus_class::code(ostream &s) {
+void plus_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void sub_class::code(ostream &s) {
+void sub_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void mul_class::code(ostream &s) {
+void mul_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void divide_class::code(ostream &s) {
+void divide_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void neg_class::code(ostream &s) {
+void neg_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void lt_class::code(ostream &s) {
+void lt_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void eq_class::code(ostream &s) {
+void eq_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void leq_class::code(ostream &s) {
+void leq_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void comp_class::code(ostream &s) {
+void comp_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void int_const_class::code(ostream& s)  
+void int_const_class::code(ostream& s, CgenClassTable* classtable)  
 {
   //
   // Need to be sure we have an IntEntry *, not an arbitrary Symbol
@@ -1062,26 +1062,109 @@ void int_const_class::code(ostream& s)
   emit_load_int(ACC,inttable.lookup_string(token->get_string()),s);
 }
 
-void string_const_class::code(ostream& s)
+void string_const_class::code(ostream& s, CgenClassTable* classtable)
 {
   emit_load_string(ACC,stringtable.lookup_string(token->get_string()),s);
 }
 
-void bool_const_class::code(ostream& s)
+void bool_const_class::code(ostream& s, CgenClassTable* classtable)
 {
   emit_load_bool(ACC, BoolConst(val), s);
 }
 
-void new__class::code(ostream &s) {
+void new__class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void isvoid_class::code(ostream &s) {
+void isvoid_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void no_expr_class::code(ostream &s) {
+void no_expr_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
-void object_class::code(ostream &s) {
+void object_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
+/////////////////////////////////////////////
+// analyze local vars
+////////////////////////////////////////////
 
+void attr_class::count_local_vars() {
+}
+
+void method_class::count_local_vars() {
+}
+
+void branch_class::compute_local_var_range(int start) {
+}
+
+void assign_class::compute_local_var_range(int start) {
+}
+
+void static_dispatch_class::compute_local_var_range(int start) {
+}
+
+void dispatch_class::compute_local_var_range(int start) {
+}
+
+void cond_class::compute_local_var_range(int start) {
+}
+
+void loop_class::compute_local_var_range(int start) {
+}
+
+void typcase_class::compute_local_var_range(int start) {
+}
+
+void block_class::compute_local_var_range(int start) {
+}
+
+void let_class::compute_local_var_range(int start) {
+}
+
+void plus_class::compute_local_var_range(int start) {
+}
+
+void sub_class::compute_local_var_range(int start) {
+}
+
+void mul_class::compute_local_var_range(int start) {
+}
+
+void divide_class::compute_local_var_range(int start) {
+}
+
+void neg_class::compute_local_var_range(int start) {
+}
+
+void lt_class::compute_local_var_range(int start) {
+}
+
+void eq_class::compute_local_var_range(int start) {
+}
+
+void leq_class::compute_local_var_range(int start) {
+}
+
+void comp_class::compute_local_var_range(int start) {
+}
+
+void int_const_class::compute_local_var_range(int start) {
+}
+
+void string_const_class::compute_local_var_range(int start) {
+}
+
+void bool_const_class::compute_local_var_range(int start) {
+}
+
+void new__class::compute_local_var_range(int start) {
+}
+
+void isvoid_class::compute_local_var_range(int start) {
+}
+
+void no_expr_class::compute_local_var_range(int start) {
+}
+
+void object_class::compute_local_var_range(int start) {
+}

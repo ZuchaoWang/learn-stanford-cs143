@@ -44,6 +44,8 @@ typedef Expressions_class *Expressions;
 typedef list_node<Case> Cases_class;
 typedef Cases_class *Cases;
 
+class CgenClassTable;
+
 #define Program_EXTRAS                          \
 virtual void cgen(ostream&) = 0;		\
 virtual void dump_with_types(ostream&, int) = 0; 
@@ -58,22 +60,25 @@ void dump_with_types(ostream&, int);
 virtual Symbol get_name() = 0;  	\
 virtual Symbol get_parent() = 0;    	\
 virtual Symbol get_filename() = 0;      \
-virtual void dump_with_types(ostream&,int) = 0; 
+virtual void dump_with_types(ostream&,int) = 0; \
 
 
 #define class__EXTRAS                                  \
 Symbol get_name()   { return name; }		       \
 Symbol get_parent() { return parent; }     	       \
 Symbol get_filename() { return filename; }             \
-void dump_with_types(ostream&,int);                    
+void dump_with_types(ostream&,int);         
 
 
 #define Feature_EXTRAS                                        \
-virtual void dump_with_types(ostream&,int) = 0; 
+virtual void dump_with_types(ostream&,int) = 0; \
+virtual void count_local_vars() = 0;  \
+int local_var_count;
 
 
 #define Feature_SHARED_EXTRAS                                       \
-void dump_with_types(ostream&,int);    
+void dump_with_types(ostream&,int);    \
+void count_local_vars();
 
 
 #define Formal_EXTRAS                              \
@@ -85,25 +90,33 @@ void dump_with_types(ostream&,int);
 
 
 #define Case_EXTRAS                             \
-virtual void dump_with_types(ostream& ,int) = 0;
+virtual void dump_with_types(ostream& ,int) = 0; \
+virtual void compute_local_var_range(int) = 0; \
+int local_var_start; \
+int local_var_end;
 
 
 #define branch_EXTRAS                                   \
-void dump_with_types(ostream& ,int);
+void dump_with_types(ostream& ,int); \
+void compute_local_var_range(int start);
 
 
 #define Expression_EXTRAS                    \
 Symbol type;                                 \
 Symbol get_type() { return type; }           \
 Expression set_type(Symbol s) { type = s; return this; } \
-virtual void code(ostream&) = 0; \
+virtual void code(ostream&, CgenClassTable* classtable) = 0; \
 virtual void dump_with_types(ostream&,int) = 0;  \
 void dump_type(ostream&, int);               \
-Expression_class() { type = (Symbol) NULL; }
+Expression_class() { type = (Symbol) NULL; } \
+virtual void compute_local_var_range(int) = 0; \
+int local_var_start; \
+int local_var_end;
 
 #define Expression_SHARED_EXTRAS           \
-void code(ostream&); 			   \
-void dump_with_types(ostream&,int); 
+void code(ostream&, CgenClassTable* classtable); 			   \
+void dump_with_types(ostream&,int); \
+void compute_local_var_range(int start);
 
 
 #endif

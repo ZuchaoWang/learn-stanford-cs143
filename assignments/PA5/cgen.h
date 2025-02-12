@@ -14,6 +14,15 @@ typedef CgenClassTable *CgenClassTableP;
 class CgenNode;
 typedef CgenNode *CgenNodeP;
 
+class CgenVarSlot {
+  // AR will be: old FP, args, RA, saved a0, local vars, temporaries
+  // FP will point to RA
+public:
+    int offset; // in terms of 4-byte words
+    bool is_attr;
+    CgenVarSlot(int _offset, bool _is_attr) { offset = _offset; is_attr = _is_attr; }
+};
+
 class CgenClassTable : public SymbolTable<Symbol,CgenNode> {
 private:
    List<CgenNode> *nds;
@@ -51,11 +60,13 @@ public:
    CgenClassTable(Classes, ostream& str);
    void code();
    CgenNodeP root();
+
+   SymbolTable<Symbol,CgenVarSlot> varscopes;
 };
 
 class CgenNodeAttrSlot {
 public:
-   int offset;
+   int offset; // in terms of 4-byte words
    attr_class *attr;
    CgenNodeAttrSlot(int _offset, attr_class *_attr) {
      offset = _offset;
@@ -65,7 +76,7 @@ public:
 
 class CgenNodeMethodSlot {
 public:
-   int offset;
+   int offset; // in terms of 4-byte words
    method_class *method;                      
    CgenNodeMethodSlot(int _offset, method_class *_method) {
     offset = _offset;
