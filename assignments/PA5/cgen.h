@@ -52,7 +52,8 @@ private:
    void build_inheritance_tree();
    void set_relations(CgenNodeP nd);
 
-   void calculate_slots();
+   void calculate_feature_slots();
+   void count_local_vars();
    void code_prototypes();
    void code_classnametable();
    void code_dispatch_tables();
@@ -108,7 +109,8 @@ public:
 
    void set_classtag(int tag) { classtag = tag; }
    int get_classtag() { return classtag; }
-   void calculate_slots();
+   void calculate_feature_slots();
+   void count_local_vars();
    void add_attr_slot(attr_class* attr);
    void add_method_slot(method_class* method);
    void code_init_def(ostream &s);

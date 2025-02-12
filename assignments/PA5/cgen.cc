@@ -616,7 +616,8 @@ CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s)
    stringclasstag = probe(Str)->get_classtag();
 
    build_inheritance_tree();
-   calculate_slots();
+   calculate_feature_slots();
+   count_local_vars();
 
    code();
    exitscope();
@@ -807,12 +808,12 @@ void CgenNode::set_parentnd(CgenNodeP p)
   parentnd = p;
 }
 
-void CgenClassTable::calculate_slots() {
+void CgenClassTable::calculate_feature_slots() {
     for(List<CgenNode> *l = nds; l; l = l->tl())
-      l->hd()->calculate_slots();
+      l->hd()->calculate_feature_slots();
 }
 
-void CgenNode::calculate_slots() {
+void CgenNode::calculate_feature_slots() {
   List<CgenNode>* ancesters = NULL;
   for (CgenNodeP p = this; p->get_name() != No_class; p = p->get_parentnd()) {
     ancesters = new List<CgenNode>(p, ancesters);
@@ -854,6 +855,17 @@ void CgenNode::add_method_slot(method_class* method) {
   }
   // if not found, add it
   method_slots = new List<CgenNodeMethodSlot>(new CgenNodeMethodSlot(list_length(method_slots), method), method_slots);
+}
+
+void CgenClassTable::count_local_vars() {
+  for(List<CgenNode> *l = nds; l; l = l->tl())
+    l->hd()->count_local_vars();
+}
+
+void CgenNode::count_local_vars() {
+  for (int i=features->first(); features->more(i); i=features->next(i)) {
+    features->nth(i)->count_local_vars();
+  }
 }
 
 void CgenClassTable::code_prototypes() {
@@ -1089,82 +1101,185 @@ void object_class::code(ostream &s, CgenClassTable* classtable) {
 ////////////////////////////////////////////
 
 void attr_class::count_local_vars() {
+  init->compute_local_var_range(0);
+  local_var_count = init->local_var_end;
 }
 
 void method_class::count_local_vars() {
+  expr->compute_local_var_range(0);
+  local_var_count = expr->local_var_end;
 }
 
 void branch_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  expr->compute_local_var_range(local_var_start+1); // +1 for name: type_decl
+  local_var_end = expr->local_var_end;
 }
 
 void assign_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  expr->compute_local_var_range(local_var_start);
+  local_var_end = expr->local_var_end;
 }
 
 void static_dispatch_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  expr->compute_local_var_range(local_var_start);
+  int local_var_cur = expr->local_var_end;
+  for (int i=actual->first(); actual->more(i); i=actual->next(i)) {
+    actual->nth(i)->compute_local_var_range(local_var_cur);
+    local_var_cur = actual->nth(i)->local_var_end;
+  }
+  local_var_end = local_var_cur;
 }
 
 void dispatch_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  expr->compute_local_var_range(local_var_start);
+  int local_var_cur = expr->local_var_end;
+  for (int i=actual->first(); actual->more(i); i=actual->next(i)) {
+    actual->nth(i)->compute_local_var_range(local_var_cur);
+    local_var_cur = actual->nth(i)->local_var_end;
+  }
+  local_var_end = local_var_cur;
 }
 
 void cond_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  pred->compute_local_var_range(local_var_start);
+  then_exp->compute_local_var_range(pred->local_var_end);
+  else_exp->compute_local_var_range(then_exp->local_var_end);
+  local_var_end = else_exp->local_var_end;
 }
 
 void loop_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  pred->compute_local_var_range(local_var_start);
+  body->compute_local_var_range(pred->local_var_end);
+  local_var_end = body->local_var_end;
 }
 
 void typcase_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  expr->compute_local_var_range(local_var_start);
+  int local_var_cur = expr->local_var_end;
+  for (int i=cases->first(); cases->more(i); i=cases->next(i)) {
+    cases->nth(i)->compute_local_var_range(local_var_cur);
+    local_var_cur = cases->nth(i)->local_var_end;
+  }
+  local_var_end = local_var_cur;
 }
 
 void block_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  int local_var_cur = local_var_start;
+  for (int i=body->first(); body->more(i); i=body->next(i)) {
+    body->nth(i)->compute_local_var_range(local_var_cur);
+    local_var_cur = body->nth(i)->local_var_end;
+  }
+  local_var_end = local_var_cur;
 }
 
 void let_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  init->compute_local_var_range(local_var_start+1); // +1 for identifier: type_decl
+  body->compute_local_var_range(init->local_var_end);
+  local_var_end = body->local_var_end;
 }
 
 void plus_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  e1->compute_local_var_range(local_var_start);
+  e2->compute_local_var_range(e1->local_var_end);
+  local_var_end = e2->local_var_end;
 }
 
 void sub_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  e1->compute_local_var_range(local_var_start);
+  e2->compute_local_var_range(e1->local_var_end);
+  local_var_end = e2->local_var_end;
 }
 
 void mul_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  e1->compute_local_var_range(local_var_start);
+  e2->compute_local_var_range(e1->local_var_end);
+  local_var_end = e2->local_var_end;
 }
 
 void divide_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  e1->compute_local_var_range(local_var_start);
+  e2->compute_local_var_range(e1->local_var_end);
+  local_var_end = e2->local_var_end;
 }
 
 void neg_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  e1->compute_local_var_range(local_var_start);
+  local_var_end = e1->local_var_end;
 }
 
 void lt_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  e1->compute_local_var_range(local_var_start);
+  e2->compute_local_var_range(e1->local_var_end);
+  local_var_end = e2->local_var_end;
 }
 
 void eq_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  e1->compute_local_var_range(local_var_start);
+  e2->compute_local_var_range(e1->local_var_end);
+  local_var_end = e2->local_var_end;
 }
 
 void leq_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  e1->compute_local_var_range(local_var_start);
+  e2->compute_local_var_range(e1->local_var_end);
+  local_var_end = e2->local_var_end;
 }
 
 void comp_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  e1->compute_local_var_range(local_var_start);
+  local_var_end = e1->local_var_end;
 }
 
 void int_const_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  local_var_end = local_var_start;
 }
 
 void string_const_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  local_var_end = local_var_start;
 }
 
 void bool_const_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  local_var_end = local_var_start;
 }
 
 void new__class::compute_local_var_range(int start) {
+  local_var_start = start;
+  local_var_end = local_var_start;
 }
 
 void isvoid_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  e1->compute_local_var_range(local_var_start);
+  local_var_end = e1->local_var_end;
 }
 
 void no_expr_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  local_var_end = local_var_start;
 }
 
 void object_class::compute_local_var_range(int start) {
+  local_var_start = start;
+  local_var_end = local_var_start;
 }
