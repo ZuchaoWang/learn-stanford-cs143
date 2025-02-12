@@ -57,6 +57,8 @@ private:
    void code_prototypes();
    void code_classnametable();
    void code_dispatch_tables();
+   void code_initializers();
+   void code_methods();
 public:
    CgenClassTable(Classes, ostream& str);
    void code();
@@ -123,6 +125,9 @@ public:
    void code_dispatch_table_ref(ostream &s);
    void code_prototype_def(ostream &s);
    void code_prototype_ref(ostream &s);
+   void code_methods_def(ostream &s);
+   void code_method_def(method_class* method, ostream &s);
+   void code_method_ref(Symbol method_name, ostream &s);
 };
 
 class BoolConst 

@@ -893,8 +893,20 @@ void CgenClassTable::code_dispatch_tables() {
       l->hd()->code_dispatch_table_def(str);
 }
 
+void CgenClassTable::code_initializers() {
+  for(List<CgenNode> *l = nds; l; l = l->tl())
+      l->hd()->code_init_def(str);
+}
+
+void CgenClassTable::code_methods() {
+  for(List<CgenNode> *l = nds; l; l = l->tl())
+      l->hd()->code_methods_def(str);
+}
+
 void CgenClassTable::code()
 {
+  // data segment
+
   if (cgen_debug) cout << "coding global data" << endl;
   code_global_data();
 
@@ -913,13 +925,16 @@ void CgenClassTable::code()
   if (cgen_debug) cout << "coding dispatch_tables" << endl;
   code_dispatch_tables();
 
+  // text segment
+
   if (cgen_debug) cout << "coding global text" << endl;
   code_global_text();
 
-//                 Add your code to emit
-//                   - object initializer
-//                   - the class methods
-//                   - etc...
+  if (cgen_debug) cout << "coding initializers" << endl;
+  code_initializers();
+
+  if (cgen_debug) cout << "coding methods" << endl;
+  code_methods();
 
 }
 
@@ -950,7 +965,54 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTableP ct) :
 }
 
 void CgenNode::code_init_def(ostream &s) {
+  if (basic_status == Basic) return;
 
+  code_init_ref(s); s << LABEL;
+
+  // entry
+  emit_move(FP, SP, s);
+  emit_push(RA, s);
+  emit_push(ACC, s);
+
+  // call parent initializer
+  if (parentnd != NULL && parentnd->basic_status != Basic) {
+    emit_push(FP, s);
+    s << JAL; parentnd->code_init_ref(s); s << endl;
+  }
+
+  // call attr initializer defined in current class
+  emit_load(ACC, -4, FP, s);
+  classtable->varscopes.enterscope();
+  for (List<CgenNodeAttrSlot>* l=attr_slots; l; l=l->tl()) {
+    classtable->varscopes.addid(l->hd()->attr->name, new CgenVarSlot(l->hd()->offset + DEFAULT_OBJFIELDS, true));
+  }
+  classtable->varscopes.enterscope();
+  for (int i=features->first(); features->more(i); i=features->next(i)) {
+    if (dynamic_cast<attr_class*>(features->nth(i)) != NULL) {
+      attr_class* attr = dynamic_cast<attr_class*>(features->nth(i));
+      if (dynamic_cast<no_expr_class*>(attr->init) == NULL) {
+        if (attr->local_var_count) {
+          emit_addiu(SP, SP, -4*attr->local_var_count, s);
+        }
+        attr->init->code(s, classtable);
+        if (attr->local_var_count) {
+          emit_addiu(SP, SP, 4*attr->local_var_count, s);
+        }
+        emit_move(T1, ACC, s);
+        emit_load(ACC, -1, FP, s);
+        emit_store(T1, classtable->varscopes.lookup(attr->name)->offset, ACC, s);
+      }
+    }
+  }
+  classtable->varscopes.exitscope();
+  classtable->varscopes.exitscope();
+  
+  // exit
+  emit_load(ACC, -1, FP, s);
+  emit_load(RA, 0, FP, s);
+  emit_load(FP, 1, FP, s);
+  emit_addiu(SP, SP, -12, s);
+  emit_return(s);
 }
 
 void CgenNode::code_init_ref(ostream &s) {
@@ -967,7 +1029,7 @@ void CgenNode::code_dispatch_table_def(ostream &s) {
     slots[l->hd()->offset] = l->hd();
   }
   for (int i=0; i<slot_num; i++) {
-    s << WORD << slots[i]->source->name->get_string() << METHOD_SEP << slots[i]->method->name->get_string() << endl;
+    s << WORD; code_method_ref(slots[i]->method->name, s); s << endl;
   }
   delete[] slots;
 }
@@ -1006,6 +1068,67 @@ void CgenNode::code_prototype_ref(ostream &s) {
   s << name->get_string() << PROTOBJ_SUFFIX;
 }
 
+void CgenNode::code_methods_def(ostream &s) {
+  for(int i=features->first(); features->more(i); i=features->next(i)) {
+    if (dynamic_cast<method_class*>(features->nth(i))) {
+      method_class *method = dynamic_cast<method_class*>(features->nth(i));
+      code_method_def(method, s);
+    }
+  }
+}
+
+void CgenNode::code_method_def(method_class* method, ostream &s) {
+  if (basic_status == Basic) return;
+
+  code_method_ref(method->name, s); s << LABEL;
+
+  // entry
+  emit_move(FP, SP, s);
+  emit_push(RA, s);
+  emit_push(ACC, s);
+
+  // body
+  classtable->varscopes.enterscope();
+  for (List<CgenNodeAttrSlot>* l=attr_slots; l; l=l->tl()) {
+    classtable->varscopes.addid(l->hd()->attr->name, new CgenVarSlot(l->hd()->offset + DEFAULT_OBJFIELDS, true));
+  }
+  classtable->varscopes.enterscope();
+  int formal_num = method->formals->len();
+  for (int i=method->formals->first(); method->formals->more(i); i=method->formals->next(i)) {
+    formal_class* formal = dynamic_cast<formal_class*>(method->formals->nth(i));
+    classtable->varscopes.addid(formal->name, new CgenVarSlot(i-formal_num, false));
+  }
+  classtable->varscopes.enterscope();
+  if (dynamic_cast<no_expr_class*>(method->expr) == NULL) {
+    if (method->local_var_count) {
+      emit_addiu(SP, SP, -4*method->local_var_count, s);
+    }
+    method->expr->code(s, classtable);
+    if (method->local_var_count) {
+      emit_addiu(SP, SP, 4*method->local_var_count, s);
+    }
+  }
+  classtable->varscopes.exitscope();
+  classtable->varscopes.exitscope();
+  classtable->varscopes.exitscope();
+  
+  // exit
+  emit_load(RA, 0, FP, s);
+  emit_load(FP, 1, FP, s);
+  emit_addiu(SP, SP, -12, s);
+  emit_return(s);
+}
+
+void CgenNode::code_method_ref(Symbol method_name, ostream &s) {
+  for (List<CgenNodeMethodSlot> *l=method_slots; l; l=l->tl()) {
+    if (l->hd()->method->name == method_name) {
+      s << l->hd()->source->name->get_string() << METHOD_SEP << method_name->get_string();
+      return;
+    }
+  }
+  cerr << "Method " << method_name->get_string() << " not found in class " << name->get_string() << endl;
+  exit(1);
+}
 
 //******************************************************************
 //
