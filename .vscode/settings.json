@@ -80,6 +80,15 @@
     "stop_token": "cpp",
     "thread": "cpp",
     "cinttypes": "cpp",
-    "filesystem": "cpp"
+    "filesystem": "cpp",
+    "cassert": "cpp",
+    "ccomplex": "cpp",
+    "cerrno": "cpp",
+    "cfloat": "cpp",
+    "climits": "cpp",
+    "ctgmath": "cpp",
+    "cstdbool": "cpp",
+    "version": "cpp",
+    "*.inc": "cpp"
   }
 }

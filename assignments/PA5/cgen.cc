@@ -49,7 +49,7 @@ Symbol
        Bool,
        concat,
        cool_abort,
-       copy,
+       copy_,
        Int,
        in_int,
        in_string,
@@ -80,7 +80,7 @@ static void initialize_constants(void)
   Bool        = idtable.add_string("Bool");
   concat      = idtable.add_string("concat");
   cool_abort  = idtable.add_string("abort");
-  copy        = idtable.add_string("copy");
+  copy_        = idtable.add_string("copy");
   Int         = idtable.add_string("Int");
   in_int      = idtable.add_string("in_int");
   in_string   = idtable.add_string("in_string");
@@ -665,7 +665,7 @@ void CgenClassTable::install_basic_classes()
            append_Features(
            single_Features(method(cool_abort, nil_Formals(), Object, no_expr())),
            single_Features(method(type_name, nil_Formals(), Str, no_expr()))),
-           single_Features(method(copy, nil_Formals(), SELF_TYPE, no_expr()))),
+           single_Features(method(copy_, nil_Formals(), SELF_TYPE, no_expr()))),
 	   filename),
     Basic,this));
 
@@ -1159,6 +1159,16 @@ void static_dispatch_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
 void dispatch_class::code(ostream &s, CgenClassTable* classtable) {
+  for (int i=actual->first(); actual->more(i); i=actual->next(i)) {
+    actual->nth(i)->code(s, classtable);
+    emit_push(ACC, s);
+  }
+  expr->code(s, classtable);
+  CgenNodeP class_node = classtable->probe(expr->type);
+  if (class_node == NULL) {
+    cerr << "dispatch_class " << expr->type->get_string() << " not found" << endl;
+  }
+  s << JAL; class_node->code_method_ref(name, s); s << endl;
 }
 
 void cond_class::code(ostream &s, CgenClassTable* classtable) {
@@ -1230,7 +1240,7 @@ void new__class::code(ostream &s, CgenClassTable* classtable) {
     cerr << "Error: " << type_name->get_string() << " not found in class table" << endl;
   }
   s << LA << ACC << " "; cgen_node->code_prototype_ref(s); s << endl;
-  emit_jal("Object.copy", s);
+  s << JAL; classtable->probe(Object)->code_method_ref(copy_, s); s << endl;
   s << JAL; cgen_node->code_init_ref(s); s << endl;
 }
 
