@@ -1142,6 +1142,12 @@ void CgenNode::code_method_ref(Symbol method_name, ostream &s) {
   exit(1);
 }
 
+void CgenNode::code_new(ostream &s) {
+  s << LA << ACC << " "; code_prototype_ref(s); s << endl;
+  s << JAL; code_method_ref(copy_, s); s << endl;
+  s << JAL; code_init_ref(s); s << endl;
+}
+
 //******************************************************************
 //
 //   Fill in the following methods to produce code for the
@@ -1156,6 +1162,16 @@ void assign_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
 void static_dispatch_class::code(ostream &s, CgenClassTable* classtable) {
+  for (int i=actual->first(); actual->more(i); i=actual->next(i)) {
+    actual->nth(i)->code(s, classtable);
+    emit_push(ACC, s);
+  }
+  expr->code(s, classtable);
+  CgenNodeP class_node = classtable->probe(type_name);
+  if (class_node == NULL) {
+    cerr << "dispatch_class " << type_name->get_string() << " not found" << endl;
+  }
+  s << JAL; class_node->code_method_ref(name, s); s << endl;
 }
 
 void dispatch_class::code(ostream &s, CgenClassTable* classtable) {
@@ -1190,18 +1206,61 @@ void let_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
 void plus_class::code(ostream &s, CgenClassTable* classtable) {
+  // plus
+  e1->code(s, classtable);
+  emit_fetch_int(T1, ACC, s);
+  e2->code(s, classtable);
+  emit_fetch_int(T2, ACC, s);
+  emit_add(T1, T1, T2, s);
+  // create new int
+  classtable->probe(Int)->code_new(s);
+  emit_store_int(T1, ACC, s);
 }
 
 void sub_class::code(ostream &s, CgenClassTable* classtable) {
+  // sub
+  e1->code(s, classtable);
+  emit_fetch_int(T1, ACC, s);
+  e2->code(s, classtable);
+  emit_fetch_int(T2, ACC, s);
+  emit_sub(T1, T1, T2, s);
+  // create new int
+  classtable->probe(Int)->code_new(s);
+  emit_store_int(T1, ACC, s);
 }
 
 void mul_class::code(ostream &s, CgenClassTable* classtable) {
+  // mul
+  e1->code(s, classtable);
+  emit_fetch_int(T1, ACC, s);
+  e2->code(s, classtable);
+  emit_fetch_int(T2, ACC, s);
+  emit_mul(T1, T1, T2, s);
+  // create new int
+  classtable->probe(Int)->code_new(s);
+  emit_store_int(T1, ACC, s);
 }
 
 void divide_class::code(ostream &s, CgenClassTable* classtable) {
+  // div
+  e1->code(s, classtable);
+  emit_fetch_int(T1, ACC, s);
+  e2->code(s, classtable);
+  emit_fetch_int(T2, ACC, s);
+  emit_div(T1, T1, T2, s);
+  // create new int
+  classtable->probe(Int)->code_new(s);
+  emit_store_int(T1, ACC, s);
 }
 
 void neg_class::code(ostream &s, CgenClassTable* classtable) {
+  // neg
+  e1->code(s, classtable);
+  emit_fetch_int(T1, ACC, s);
+  emit_neg(T1, T1, s);
+  // create new int
+  classtable->probe(Int)->code_new(s);
+  emit_store_int(T1, ACC, s);
 }
 
 void lt_class::code(ostream &s, CgenClassTable* classtable) {
@@ -1239,9 +1298,7 @@ void new__class::code(ostream &s, CgenClassTable* classtable) {
   if (cgen_node == NULL) {
     cerr << "Error: " << type_name->get_string() << " not found in class table" << endl;
   }
-  s << LA << ACC << " "; cgen_node->code_prototype_ref(s); s << endl;
-  s << JAL; classtable->probe(Object)->code_method_ref(copy_, s); s << endl;
-  s << JAL; cgen_node->code_init_ref(s); s << endl;
+  cgen_node->code_new(s);
 }
 
 void isvoid_class::code(ostream &s, CgenClassTable* classtable) {

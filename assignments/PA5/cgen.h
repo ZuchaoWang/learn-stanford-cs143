@@ -128,6 +128,7 @@ public:
    void code_methods_def(ostream &s);
    void code_method_def(method_class* method, ostream &s);
    void code_method_ref(Symbol method_name, ostream &s);
+   void code_new(ostream&);
 };
 
 class BoolConst 
