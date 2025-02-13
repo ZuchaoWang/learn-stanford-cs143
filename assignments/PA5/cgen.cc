@@ -1215,7 +1215,9 @@ void plus_class::code(ostream &s, CgenClassTable* classtable) {
   // plus
   e1->code(s, classtable);
   emit_fetch_int(T1, ACC, s);
+  emit_push(T1, s);
   e2->code(s, classtable);
+  emit_pop(T1, s);
   emit_fetch_int(T2, ACC, s);
   emit_add(T1, T1, T2, s);
   // create new int
@@ -1229,7 +1231,9 @@ void sub_class::code(ostream &s, CgenClassTable* classtable) {
   // sub
   e1->code(s, classtable);
   emit_fetch_int(T1, ACC, s);
+  emit_push(T1, s);
   e2->code(s, classtable);
+  emit_pop(T1, s);
   emit_fetch_int(T2, ACC, s);
   emit_sub(T1, T1, T2, s);
   // create new int
@@ -1243,7 +1247,9 @@ void mul_class::code(ostream &s, CgenClassTable* classtable) {
   // mul
   e1->code(s, classtable);
   emit_fetch_int(T1, ACC, s);
+  emit_push(T1, s);
   e2->code(s, classtable);
+  emit_pop(T1, s);
   emit_fetch_int(T2, ACC, s);
   emit_mul(T1, T1, T2, s);
   // create new int
@@ -1257,7 +1263,9 @@ void divide_class::code(ostream &s, CgenClassTable* classtable) {
   // div
   e1->code(s, classtable);
   emit_fetch_int(T1, ACC, s);
+  emit_push(T1, s);
   e2->code(s, classtable);
+  emit_pop(T1, s);
   emit_fetch_int(T2, ACC, s);
   emit_div(T1, T1, T2, s);
   // create new int

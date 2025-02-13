@@ -8,7 +8,7 @@ class Main {
   main():Int { 
     {
       io.out_string("Hello, world!\n");
-      io.out_int(1 + 2);
+      io.out_int(1 + 2 * 3 - ~4);
       io.out_string("\n");
       0;
     }
