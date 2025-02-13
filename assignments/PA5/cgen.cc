@@ -819,16 +819,16 @@ void CgenNode::calculate_feature_slots() {
     ancesters = new List<CgenNode>(p, ancesters);
   }
   for (List<CgenNode> *l = ancesters; l; l = l->tl()) {
-    CgenNodeP node = l->hd();
-    Features fs = node->features;
+    CgenNodeP cgen_node = l->hd();
+    Features fs = cgen_node->features;
     for (int i=fs->first(); fs->more(i); i=fs->next(i)) {
       Feature f = fs->nth(i);
       if (dynamic_cast<attr_class*>(f)) {
         // handle attribute
-        add_attr_slot(dynamic_cast<attr_class*>(f), node);
+        add_attr_slot(dynamic_cast<attr_class*>(f), cgen_node);
       } else {
         // handle method
-        add_method_slot(dynamic_cast<method_class*>(f), node);
+        add_method_slot(dynamic_cast<method_class*>(f), cgen_node);
       }
     }
   }
@@ -882,8 +882,8 @@ void CgenClassTable::code_classnametable() {
   for(List<CgenNode> *l = nds; l; l = l->tl())
     nodes[l->hd()->get_classtag()] = l->hd();
   for(int i = 0; i < class_count; i++) {
-    CgenNode* node = nodes[i];
-    str << WORD; stringtable.add_string(node->get_name()->get_string())->code_ref(str); str<<endl;
+    CgenNode* cgen_node = nodes[i];
+    str << WORD; stringtable.add_string(cgen_node->get_name()->get_string())->code_ref(str); str<<endl;
   }
   delete[] nodes;
 }
@@ -1171,6 +1171,9 @@ void typcase_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
 void block_class::code(ostream &s, CgenClassTable* classtable) {
+  for (int i = body->first(); body->more(i); i=body->next(i)) {
+    body->nth(i)->code(s, classtable);
+  }
 }
 
 void let_class::code(ostream &s, CgenClassTable* classtable) {
@@ -1222,6 +1225,13 @@ void bool_const_class::code(ostream& s, CgenClassTable* classtable)
 }
 
 void new__class::code(ostream &s, CgenClassTable* classtable) {
+  CgenNodeP cgen_node = classtable->probe(type_name);
+  if (cgen_node == NULL) {
+    cerr << "Error: " << type_name->get_string() << " not found in class table" << endl;
+  }
+  s << LA << ACC << " "; cgen_node->code_prototype_ref(s); s << endl;
+  emit_jal("Object.copy", s);
+  s << JAL; cgen_node->code_init_ref(s); s << endl;
 }
 
 void isvoid_class::code(ostream &s, CgenClassTable* classtable) {
@@ -1231,6 +1241,16 @@ void no_expr_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
 void object_class::code(ostream &s, CgenClassTable* classtable) {
+  CgenVarSlot* slot = classtable->varscopes.lookup(name);
+  if (slot == NULL) {
+    cerr << "Error: " << name->get_string() << " not found in varscopes" << endl;
+  }
+  if (slot->is_attr) {
+    emit_load(ACC, -1, FP, s);
+    emit_load(ACC, slot->offset, ACC, s);
+  } else {
+    emit_load(ACC, slot->offset, FP, s);
+  }
 }
 
 /////////////////////////////////////////////
