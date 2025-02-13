@@ -322,6 +322,12 @@ static void emit_push(char *reg, ostream& str)
   emit_addiu(SP,SP,-4,str);
 }
 
+static void emit_pop(char *reg, ostream& str)
+{
+  emit_load(reg,1,SP,str);
+  emit_addiu(SP,SP,4,str);
+}
+
 //
 // Fetch the integer value in an Int object.
 // Emits code to fetch the integer value of the Integer object pointed
@@ -1213,7 +1219,9 @@ void plus_class::code(ostream &s, CgenClassTable* classtable) {
   emit_fetch_int(T2, ACC, s);
   emit_add(T1, T1, T2, s);
   // create new int
+  emit_push(T1, s);
   classtable->probe(Int)->code_new(s);
+  emit_pop(T1, s);
   emit_store_int(T1, ACC, s);
 }
 
@@ -1225,7 +1233,9 @@ void sub_class::code(ostream &s, CgenClassTable* classtable) {
   emit_fetch_int(T2, ACC, s);
   emit_sub(T1, T1, T2, s);
   // create new int
+  emit_push(T1, s);
   classtable->probe(Int)->code_new(s);
+  emit_pop(T1, s);
   emit_store_int(T1, ACC, s);
 }
 
@@ -1237,7 +1247,9 @@ void mul_class::code(ostream &s, CgenClassTable* classtable) {
   emit_fetch_int(T2, ACC, s);
   emit_mul(T1, T1, T2, s);
   // create new int
+  emit_push(T1, s);
   classtable->probe(Int)->code_new(s);
+  emit_pop(T1, s);
   emit_store_int(T1, ACC, s);
 }
 
@@ -1249,7 +1261,9 @@ void divide_class::code(ostream &s, CgenClassTable* classtable) {
   emit_fetch_int(T2, ACC, s);
   emit_div(T1, T1, T2, s);
   // create new int
+  emit_push(T1, s);
   classtable->probe(Int)->code_new(s);
+  emit_pop(T1, s);
   emit_store_int(T1, ACC, s);
 }
 
@@ -1259,7 +1273,9 @@ void neg_class::code(ostream &s, CgenClassTable* classtable) {
   emit_fetch_int(T1, ACC, s);
   emit_neg(T1, T1, s);
   // create new int
+  emit_push(T1, s);
   classtable->probe(Int)->code_new(s);
+  emit_pop(T1, s);
   emit_store_int(T1, ACC, s);
 }
 
