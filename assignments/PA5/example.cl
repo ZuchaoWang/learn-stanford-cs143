@@ -15,7 +15,7 @@ class Main {
       io.out_string("\n");
 
       (* condition *)
-      let x: Int <- 0:
+      let x: Int <- 0 in
         while x < 3 loop {
           io.out_int(x);
           x <- x + 1;

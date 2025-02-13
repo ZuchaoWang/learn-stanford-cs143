@@ -57,7 +57,8 @@ private:
    void calculate_feature_slots();
    void count_local_vars();
    void code_prototypes();
-   void code_classnametable();
+   void code_classname_table();
+   void code_classparent_table();
    void code_dispatch_tables();
    void code_initializers();
    void code_methods();

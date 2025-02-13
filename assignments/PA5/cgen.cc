@@ -886,7 +886,7 @@ void CgenClassTable::code_prototypes() {
       l->hd()->code_prototype_def(str);
 }
 
-void CgenClassTable::code_classnametable() {
+void CgenClassTable::code_classname_table() {
   str << CLASSNAMETAB << LABEL;
   int class_count = list_length(nds);
   CgenNode** nodes = new CgenNode*[class_count];
@@ -895,6 +895,19 @@ void CgenClassTable::code_classnametable() {
   for(int i = 0; i < class_count; i++) {
     CgenNode* cgen_node = nodes[i];
     str << WORD; stringtable.add_string(cgen_node->get_name()->get_string())->code_ref(str); str<<endl;
+  }
+  delete[] nodes;
+}
+
+void CgenClassTable::code_classparent_table() {
+  str << CLASSPARENTTAB << LABEL;
+  int class_count = list_length(nds);
+  CgenNode** nodes = new CgenNode*[class_count];
+  for(List<CgenNode> *l = nds; l; l = l->tl())
+    nodes[l->hd()->get_classtag()] = l->hd();
+  for(int i = 0; i < class_count; i++) {
+    CgenNode* cgen_node = nodes[i];
+    str << WORD << cgen_node->get_parentnd()->get_classtag() <<endl;
   }
   delete[] nodes;
 }
@@ -930,10 +943,13 @@ void CgenClassTable::code()
   if (cgen_debug) cout << "coding prototypes" << endl;
   code_prototypes();
 
-  if (cgen_debug) cout << "coding classnames" << endl;
-  code_classnametable();
+  if (cgen_debug) cout << "coding class names" << endl;
+  code_classname_table();
 
-  if (cgen_debug) cout << "coding dispatch_tables" << endl;
+  if (cgen_debug) cout << "coding class parents" << endl;
+  code_classparent_table();
+
+  if (cgen_debug) cout << "coding dispatch tables" << endl;
   code_dispatch_tables();
 
   // text segment
