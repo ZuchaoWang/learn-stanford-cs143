@@ -65,6 +65,7 @@ public:
    CgenNodeP root();
 
    SymbolTable<Symbol,CgenVarSlot> varscopes;
+   int custom_label_counter;
 };
 
 class CgenNodeAttrSlot {

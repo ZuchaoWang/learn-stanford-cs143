@@ -36,6 +36,7 @@
 #define STRCONST_PREFIX      "str_const"
 #define BOOLCONST_PREFIX     "bool_const"
 
+#define CUSTOMLABEL_PREFIX        "_custom_label"
 
 #define EMPTYSLOT            0
 #define LABEL                ":\n"

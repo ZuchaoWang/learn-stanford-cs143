@@ -610,7 +610,7 @@ void CgenClassTable::code_constants()
 }
 
 
-CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s)
+CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s), custom_label_counter(0)
 {
    enterscope();
    if (cgen_debug) cout << "Building CgenClassTable" << endl;
@@ -1288,15 +1288,60 @@ void neg_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
 void lt_class::code(ostream &s, CgenClassTable* classtable) {
+  // prepare
+  e1->code(s, classtable);
+  emit_fetch_int(T1, ACC, s);
+  emit_push(T1, s);
+  e2->code(s, classtable);
+  emit_pop(T1, s);
+  emit_fetch_int(T2, ACC, s);
+  // branch
+  int count = classtable->custom_label_counter++;
+  emit_load_bool(ACC, BoolConst(1), s);
+  s << BLT << T1 << " " << T2 << " " << CUSTOMLABEL_PREFIX << count << endl;
+  emit_load_bool(ACC, BoolConst(0), s);
+  s << CUSTOMLABEL_PREFIX << count << LABEL << endl;
 }
 
 void eq_class::code(ostream &s, CgenClassTable* classtable) {
+  // prepare
+  e1->code(s, classtable);
+  emit_push(ACC, s);
+  e2->code(s, classtable);
+  emit_pop(T1, s);
+  emit_move(T2, ACC, s);
+  emit_load_bool(ACC, BoolConst(1), s);
+  emit_load_bool(A1, BoolConst(0), s);
+  // call
+  s << JAL << "equality_test" << endl;
 }
 
 void leq_class::code(ostream &s, CgenClassTable* classtable) {
+  // prepare
+  e1->code(s, classtable);
+  emit_fetch_int(T1, ACC, s);
+  emit_push(T1, s);
+  e2->code(s, classtable);
+  emit_pop(T1, s);
+  emit_fetch_int(T2, ACC, s);
+  // branch
+  int count = classtable->custom_label_counter++;
+  emit_load_bool(ACC, BoolConst(1), s);
+  s << BLEQ << T1 << " " << T2 << " " << CUSTOMLABEL_PREFIX << count << endl;
+  emit_load_bool(ACC, BoolConst(0), s);
+  s << CUSTOMLABEL_PREFIX << count << LABEL << endl;
 }
 
 void comp_class::code(ostream &s, CgenClassTable* classtable) {
+  // prepare
+  e1->code(s, classtable);
+  emit_fetch_int(T1, ACC, s);
+  // branch
+  int count = classtable->custom_label_counter++;
+  emit_load_bool(ACC, BoolConst(1), s);
+  s << BEQZ << T1 << " " << CUSTOMLABEL_PREFIX << count << endl;
+  emit_load_bool(ACC, BoolConst(0), s);
+  s << CUSTOMLABEL_PREFIX << count << LABEL << endl;
 }
 
 void int_const_class::code(ostream& s, CgenClassTable* classtable)  
