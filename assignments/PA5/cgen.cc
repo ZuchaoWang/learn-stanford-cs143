@@ -70,6 +70,8 @@ Symbol
        substr,
        type_name,
        val;
+
+Symbol filename;
 //
 // Initializing the predefined symbols.
 //
@@ -103,6 +105,9 @@ static void initialize_constants(void)
   substr      = idtable.add_string("substr");
   type_name   = idtable.add_string("type_name");
   val         = idtable.add_string("_val");
+
+  // filename
+  filename    = stringtable.add_string("<basic class>");
 }
 
 static char *gc_init_names[] =
@@ -209,8 +214,8 @@ static void emit_add(char *dest, char *src1, char *src2, ostream& s)
 static void emit_addu(char *dest, char *src1, char *src2, ostream& s)
 { s << ADDU << dest << " " << src1 << " " << src2 << endl; }
 
-static void emit_addiu(char *dest, char *src1, int imm, ostream& s)
-{ s << ADDIU << dest << " " << src1 << " " << imm << endl; }
+static void emit_addi(char *dest, char *src1, int imm, ostream& s)
+{ s << ADDI << dest << " " << src1 << " " << imm << endl; }
 
 static void emit_div(char *dest, char *src1, char *src2, ostream& s)
 { s << DIV << dest << " " << src1 << " " << src2 << endl; }
@@ -319,13 +324,13 @@ static void emit_branch(int l, ostream& s)
 static void emit_push(char *reg, ostream& str)
 {
   emit_store(reg,0,SP,str);
-  emit_addiu(SP,SP,-4,str);
+  emit_addi(SP,SP,-4,str);
 }
 
 static void emit_pop(char *reg, ostream& str)
 {
   emit_load(reg,1,SP,str);
-  emit_addiu(SP,SP,4,str);
+  emit_addi(SP,SP,4,str);
 }
 
 //
@@ -350,7 +355,7 @@ static void emit_test_collector(ostream &s)
   emit_move(ACC, SP, s); // stack end
   emit_move(A1, ZERO, s); // allocate nothing
   s << JAL << gc_collect_names[cgen_Memmgr] << endl;
-  emit_addiu(SP,SP,4,s);
+  emit_addi(SP,SP,4,s);
   emit_load(ACC,0,SP,s);
 }
 
@@ -634,7 +639,7 @@ void CgenClassTable::install_basic_classes()
 
 // The tree package uses these globals to annotate the classes built below.
   //curr_lineno  = 0;
-  Symbol filename = stringtable.add_string("<basic class>");
+  // Symbol filename = stringtable.add_string("<basic class>");
 
 //
 // A few special class names are installed in the lookup table but not
@@ -983,8 +988,8 @@ void CgenNode::code_init_def(ostream &s) {
   emit_store(FP, 0, SP, s);
   emit_store(RA, -1, SP, s);
   emit_store(ACC, -2, SP, s);
-  emit_addiu(FP, SP, -4, s);
-  emit_addiu(SP, SP, -12, s);
+  emit_addi(FP, SP, -4, s);
+  emit_addi(SP, SP, -12, s);
 
   // call parent initializer
   if (parentnd != NULL && parentnd->basic_status != Basic) {
@@ -1004,11 +1009,11 @@ void CgenNode::code_init_def(ostream &s) {
       attr_class* attr = dynamic_cast<attr_class*>(features->nth(i));
       if (dynamic_cast<no_expr_class*>(attr->init) == NULL) {
         if (attr->local_var_count) {
-          emit_addiu(SP, SP, -4*attr->local_var_count, s);
+          emit_addi(SP, SP, -4*attr->local_var_count, s);
         }
         attr->init->code(s, classtable);
         if (attr->local_var_count) {
-          emit_addiu(SP, SP, 4*attr->local_var_count, s);
+          emit_addi(SP, SP, 4*attr->local_var_count, s);
         }
         emit_move(T1, ACC, s);
         emit_load(ACC, -1, FP, s);
@@ -1023,7 +1028,7 @@ void CgenNode::code_init_def(ostream &s) {
   emit_load(ACC, -1, FP, s);
   emit_load(RA, 0, FP, s);
   emit_load(FP, 1, FP, s);
-  emit_addiu(SP, SP, 12, s);
+  emit_addi(SP, SP, 12, s);
   emit_return(s);
 }
 
@@ -1101,8 +1106,8 @@ void CgenNode::code_method_def(method_class* method, ostream &s) {
   emit_store(FP, 0, SP, s);
   emit_store(RA, -1, SP, s);
   emit_store(ACC, -2, SP, s);
-  emit_addiu(FP, SP, -4, s);
-  emit_addiu(SP, SP, -12, s);
+  emit_addi(FP, SP, -4, s);
+  emit_addi(SP, SP, -12, s);
 
   // body
   classtable->varscopes.enterscope();
@@ -1119,11 +1124,11 @@ void CgenNode::code_method_def(method_class* method, ostream &s) {
   classtable->varscopes.enterscope();
   if (dynamic_cast<no_expr_class*>(method->expr) == NULL) {
     if (method->local_var_count) {
-      emit_addiu(SP, SP, -4*method->local_var_count, s);
+      emit_addi(SP, SP, -4*method->local_var_count, s);
     }
     method->expr->code(s, classtable);
     if (method->local_var_count) {
-      emit_addiu(SP, SP, 4*method->local_var_count, s);
+      emit_addi(SP, SP, 4*method->local_var_count, s);
     }
   }
   classtable->varscopes.exitscope();
@@ -1133,7 +1138,7 @@ void CgenNode::code_method_def(method_class* method, ostream &s) {
   // exit
   emit_load(RA, 0, FP, s);
   emit_load(FP, 1, FP, s);
-  emit_addiu(SP, SP, 12, s);
+  emit_addi(SP, SP, 12, s);
   emit_return(s);
 }
 
@@ -1177,7 +1182,16 @@ void static_dispatch_class::code(ostream &s, CgenClassTable* classtable) {
   if (class_node == NULL) {
     cerr << "dispatch_class " << type_name->get_string() << " not found" << endl;
   }
+  int count_void = classtable->custom_label_counter++;
+  int count_end = classtable->custom_label_counter++;
+  s << BEQZ << ACC << " " << CUSTOMLABEL_PREFIX << count_void << endl;
   s << JAL; class_node->code_method_ref(name, s); s << endl;
+  s << J << " " << CUSTOMLABEL_PREFIX << count_end << endl;
+  s << CUSTOMLABEL_PREFIX << count_void << LABEL;
+  s << LA << ACC << " "; static_cast<StringEntry*>(filename)->code_ref(s); s << endl;
+  s << LI << T1 << " " << 0 << endl;
+  emit_jal("_dispatch_abort", s);
+  s << CUSTOMLABEL_PREFIX << count_end << LABEL;
 }
 
 void dispatch_class::code(ostream &s, CgenClassTable* classtable) {
@@ -1190,7 +1204,16 @@ void dispatch_class::code(ostream &s, CgenClassTable* classtable) {
   if (class_node == NULL) {
     cerr << "dispatch_class " << expr->type->get_string() << " not found" << endl;
   }
+  int count_void = classtable->custom_label_counter++;
+  int count_end = classtable->custom_label_counter++;
+  s << BEQZ << ACC << " " << CUSTOMLABEL_PREFIX << count_void << endl;
   s << JAL; class_node->code_method_ref(name, s); s << endl;
+  s << J << " " << CUSTOMLABEL_PREFIX << count_end << endl;
+  s << CUSTOMLABEL_PREFIX << count_void << LABEL;
+  s << LA << ACC << " "; static_cast<StringEntry*>(filename)->code_ref(s); s << endl;
+  s << LI << T1 << " " << 0 << endl;
+  emit_jal("_dispatch_abort", s);
+  s << CUSTOMLABEL_PREFIX << count_end << LABEL;
 }
 
 void cond_class::code(ostream &s, CgenClassTable* classtable) {
@@ -1295,12 +1318,11 @@ void lt_class::code(ostream &s, CgenClassTable* classtable) {
   e2->code(s, classtable);
   emit_pop(T1, s);
   emit_fetch_int(T2, ACC, s);
-  // branch
-  int count = classtable->custom_label_counter++;
-  emit_load_bool(ACC, BoolConst(1), s);
-  s << BLT << T1 << " " << T2 << " " << CUSTOMLABEL_PREFIX << count << endl;
+  // choose between boolconst0 or boolconst1
+  s << SLT << T1 << " " << T1 << " " << T2 << endl;
+  emit_sll(T1, T1, 4, s);
   emit_load_bool(ACC, BoolConst(0), s);
-  s << CUSTOMLABEL_PREFIX << count << LABEL << endl;
+  emit_add(ACC, ACC, T1, s);
 }
 
 void eq_class::code(ostream &s, CgenClassTable* classtable) {
@@ -1324,12 +1346,13 @@ void leq_class::code(ostream &s, CgenClassTable* classtable) {
   e2->code(s, classtable);
   emit_pop(T1, s);
   emit_fetch_int(T2, ACC, s);
-  // branch
-  int count = classtable->custom_label_counter++;
-  emit_load_bool(ACC, BoolConst(1), s);
-  s << BLEQ << T1 << " " << T2 << " " << CUSTOMLABEL_PREFIX << count << endl;
+  // choose between boolconst0 or boolconst1
+  s << SLT << T1 << " " << T2 << " " << T1 << endl;
+  emit_addi(T1, T1, -1, s);
+  emit_neg(T1, T1, s);
+  emit_sll(T1, T1, 4, s);
   emit_load_bool(ACC, BoolConst(0), s);
-  s << CUSTOMLABEL_PREFIX << count << LABEL << endl;
+  emit_add(ACC, ACC, T1, s);
 }
 
 void comp_class::code(ostream &s, CgenClassTable* classtable) {
@@ -1371,6 +1394,13 @@ void new__class::code(ostream &s, CgenClassTable* classtable) {
 }
 
 void isvoid_class::code(ostream &s, CgenClassTable* classtable) {
+  e1->code(s, classtable);
+  int count = classtable->custom_label_counter++;
+  emit_move(T1, ACC, s);
+  emit_load_bool(ACC, BoolConst(1), s);
+  s << BEQZ << T1 << " " << CUSTOMLABEL_PREFIX << count << endl;
+  emit_load_bool(ACC, BoolConst(0), s);
+  s << CUSTOMLABEL_PREFIX << count << LABEL << endl;
 }
 
 void no_expr_class::code(ostream &s, CgenClassTable* classtable) {

@@ -93,7 +93,7 @@
 #define ADD   "\tadd\t"
 #define ADDI  "\taddi\t"
 #define ADDU  "\taddu\t"
-#define ADDIU "\taddiu\t"
+#define ADDI  "\taddi\t"
 #define DIV   "\tdiv\t"
 #define MUL   "\tmul\t"
 #define SUB   "\tsub\t"
@@ -105,5 +105,6 @@
 #define BLEQ     "\tble\t"
 #define BLT      "\tblt\t"
 #define BGT      "\tbgt\t"
-
+#define SLT      "\tslt\t"
+#define J        "\tj\t"
 
