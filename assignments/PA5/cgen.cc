@@ -974,10 +974,11 @@ void CgenNode::code_init_def(ostream &s) {
   }
 
   // entry
-  emit_push(FP, s);
-  emit_move(FP, SP, s);
-  emit_push(RA, s);
-  emit_push(ACC, s);
+  emit_store(FP, 0, SP, s);
+  emit_store(RA, -1, SP, s);
+  emit_store(ACC, -2, SP, s);
+  emit_addiu(FP, SP, -4, s);
+  emit_addiu(SP, SP, -12, s);
 
   // call parent initializer
   if (parentnd != NULL && parentnd->basic_status != Basic) {
@@ -1015,7 +1016,7 @@ void CgenNode::code_init_def(ostream &s) {
   emit_load(ACC, -1, FP, s);
   emit_load(RA, 0, FP, s);
   emit_load(FP, 1, FP, s);
-  emit_addiu(SP, SP, -12, s);
+  emit_addiu(SP, SP, 12, s);
   emit_return(s);
 }
 
@@ -1090,10 +1091,11 @@ void CgenNode::code_method_def(method_class* method, ostream &s) {
   code_method_ref(method->name, s); s << LABEL;
 
   // entry
-  emit_push(FP, s);
-  emit_move(FP, SP, s);
-  emit_push(RA, s);
-  emit_push(ACC, s);
+  emit_store(FP, 0, SP, s);
+  emit_store(RA, -1, SP, s);
+  emit_store(ACC, -2, SP, s);
+  emit_addiu(FP, SP, -4, s);
+  emit_addiu(SP, SP, -12, s);
 
   // body
   classtable->varscopes.enterscope();
@@ -1123,7 +1125,7 @@ void CgenNode::code_method_def(method_class* method, ostream &s) {
   // exit
   emit_load(RA, 0, FP, s);
   emit_load(FP, 1, FP, s);
-  emit_addiu(SP, SP, -12, s);
+  emit_addiu(SP, SP, 12, s);
   emit_return(s);
 }
 
