@@ -226,6 +226,9 @@ static void emit_mul(char *dest, char *src1, char *src2, ostream& s)
 static void emit_sub(char *dest, char *src1, char *src2, ostream& s)
 { s << SUB << dest << " " << src1 << " " << src2 << endl; }
 
+static void emit_slt(char *dest, char *src1, char *src2, ostream& s)
+{ s << SLT << dest << " " << src1 << " " << src2 << endl; }
+
 static void emit_sll(char *dest, char *src1, int num, ostream& s)
 { s << SLL << dest << " " << src1 << " " << num << endl; }
 
@@ -1211,14 +1214,14 @@ void static_dispatch_class::code(ostream &s, CgenClassTable* classtable) {
   }
   int count_void = classtable->get_custom_label_count();
   int count_end = classtable->get_custom_label_count();
-  s << BEQZ << ACC << " " << CUSTOMLABEL_PREFIX << count_void << endl;
+  emit_beqz(ACC, count_void, s);
   s << JAL; class_node->code_method_ref(name, s); s << endl;
-  s << J << " " << CUSTOMLABEL_PREFIX << count_end << endl;
-  s << CUSTOMLABEL_PREFIX << count_void << LABEL;
+  emit_branch(count_end, s);
+  emit_label_def(count_void, s);
   s << LA << ACC << " "; static_cast<StringEntry*>(filename)->code_ref(s); s << endl;
-  s << LI << T1 << " " << 0 << endl;
+  emit_load_imm(T1, 0, s);
   emit_jal("_dispatch_abort", s);
-  s << CUSTOMLABEL_PREFIX << count_end << LABEL;
+  emit_label_def(count_end, s);
 }
 
 void dispatch_class::code(ostream &s, CgenClassTable* classtable) {
@@ -1233,14 +1236,14 @@ void dispatch_class::code(ostream &s, CgenClassTable* classtable) {
   }
   int count_void = classtable->get_custom_label_count();
   int count_end = classtable->get_custom_label_count();
-  s << BEQZ << ACC << " " << CUSTOMLABEL_PREFIX << count_void << endl;
+  emit_beqz(ACC, count_void, s);
   s << JAL; class_node->code_method_ref(name, s); s << endl;
-  s << J << " " << CUSTOMLABEL_PREFIX << count_end << endl;
-  s << CUSTOMLABEL_PREFIX << count_void << LABEL;
+  emit_branch(count_end, s);
+  emit_label_def(count_void, s);
   s << LA << ACC << " "; static_cast<StringEntry*>(filename)->code_ref(s); s << endl;
-  s << LI << T1 << " " << 0 << endl;
+  emit_load_imm(T1, 0, s);
   emit_jal("_dispatch_abort", s);
-  s << CUSTOMLABEL_PREFIX << count_end << LABEL;
+  emit_label_def(count_end, s);
 }
 
 void cond_class::code(ostream &s, CgenClassTable* classtable) {
@@ -1249,25 +1252,25 @@ void cond_class::code(ostream &s, CgenClassTable* classtable) {
 
   int count_false = classtable->get_custom_label_count();
   int count_end = classtable->get_custom_label_count();
-  s << BEQZ << T1 << " " << CUSTOMLABEL_PREFIX << count_false << endl;
+  emit_beqz(T1, count_false, s);
   then_exp->code(s, classtable);
-  s << J << " " << CUSTOMLABEL_PREFIX << count_end << endl;
-  s << CUSTOMLABEL_PREFIX << count_false << LABEL;
+  emit_branch(count_end, s);
+  emit_label_def(count_false, s);
   else_exp->code(s, classtable);
-  s << CUSTOMLABEL_PREFIX << count_end << LABEL;
+  emit_label_def(count_end, s);
 }
 
 void loop_class::code(ostream &s, CgenClassTable* classtable) {
   int count_start = classtable->get_custom_label_count();
   int count_end = classtable->get_custom_label_count();
 
-  s << CUSTOMLABEL_PREFIX << count_start << LABEL;
+  emit_label_def(count_start, s);
   pred->code(s, classtable);
   emit_fetch_int(T1, ACC, s);
-  s << BEQZ << T1 << " " << CUSTOMLABEL_PREFIX << count_end << endl;
+  emit_beqz(T1, count_end, s);
   body->code(s, classtable);
-  s << J << " " << CUSTOMLABEL_PREFIX << count_start << endl;
-  s << CUSTOMLABEL_PREFIX << count_end << LABEL;
+  emit_branch(count_start, s);
+  emit_label_def(count_end, s);
 
   // return void
   emit_load_imm(ACC, 0, s);
@@ -1378,7 +1381,7 @@ void lt_class::code(ostream &s, CgenClassTable* classtable) {
   emit_pop(T1, s);
   emit_fetch_int(T2, ACC, s);
   // choose between boolconst0 or boolconst1
-  s << SLT << T1 << " " << T1 << " " << T2 << endl;
+  emit_slt(T1, T1, T2, s);
   emit_sll(T1, T1, 4, s);
   emit_load_bool(ACC, BoolConst(0), s);
   emit_add(ACC, ACC, T1, s);
@@ -1394,7 +1397,7 @@ void eq_class::code(ostream &s, CgenClassTable* classtable) {
   emit_load_bool(ACC, BoolConst(1), s);
   emit_load_bool(A1, BoolConst(0), s);
   // call
-  s << JAL << "equality_test" << endl;
+  emit_jal("equality_test", s);
 }
 
 void leq_class::code(ostream &s, CgenClassTable* classtable) {
@@ -1406,7 +1409,7 @@ void leq_class::code(ostream &s, CgenClassTable* classtable) {
   emit_pop(T1, s);
   emit_fetch_int(T2, ACC, s);
   // choose between boolconst0 or boolconst1
-  s << SLT << T1 << " " << T2 << " " << T1 << endl;
+  emit_slt(T1, T2, T1, s);
   emit_addi(T1, T1, -1, s);
   emit_neg(T1, T1, s);
   emit_sll(T1, T1, 4, s);
@@ -1421,9 +1424,9 @@ void comp_class::code(ostream &s, CgenClassTable* classtable) {
   // branch
   int count = classtable->get_custom_label_count();
   emit_load_bool(ACC, BoolConst(1), s);
-  s << BEQZ << T1 << " " << CUSTOMLABEL_PREFIX << count << endl;
+  emit_beqz(T1, count, s);
   emit_load_bool(ACC, BoolConst(0), s);
-  s << CUSTOMLABEL_PREFIX << count << LABEL << endl;
+  emit_label_def(count, s);
 }
 
 void int_const_class::code(ostream& s, CgenClassTable* classtable)  
@@ -1457,9 +1460,9 @@ void isvoid_class::code(ostream &s, CgenClassTable* classtable) {
   int count = classtable->get_custom_label_count();
   emit_move(T1, ACC, s);
   emit_load_bool(ACC, BoolConst(1), s);
-  s << BEQZ << T1 << " " << CUSTOMLABEL_PREFIX << count << endl;
+  emit_beqz(T1, count, s);
   emit_load_bool(ACC, BoolConst(0), s);
-  s << CUSTOMLABEL_PREFIX << count << LABEL << endl;
+  emit_label_def(count, s);
 }
 
 void no_expr_class::code(ostream &s, CgenClassTable* classtable) {
