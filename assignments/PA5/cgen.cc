@@ -991,6 +991,7 @@ void CgenNode::code_init_def(ostream &s) {
   for (List<CgenNodeAttrSlot>* l=attr_slots; l; l=l->tl()) {
     classtable->varscopes.addid(l->hd()->attr->name, new CgenVarSlot(l->hd()->offset + DEFAULT_OBJFIELDS, true));
   }
+  classtable->varscopes.addid(self, new CgenVarSlot(-1, false));
   classtable->varscopes.enterscope();
   for (int i=features->first(); features->more(i); i=features->next(i)) {
     if (dynamic_cast<attr_class*>(features->nth(i)) != NULL) {
@@ -1102,11 +1103,12 @@ void CgenNode::code_method_def(method_class* method, ostream &s) {
   for (List<CgenNodeAttrSlot>* l=attr_slots; l; l=l->tl()) {
     classtable->varscopes.addid(l->hd()->attr->name, new CgenVarSlot(l->hd()->offset + DEFAULT_OBJFIELDS, true));
   }
+  classtable->varscopes.addid(self, new CgenVarSlot(-1, false));
   classtable->varscopes.enterscope();
   int formal_num = method->formals->len();
   for (int i=method->formals->first(); method->formals->more(i); i=method->formals->next(i)) {
     formal_class* formal = dynamic_cast<formal_class*>(method->formals->nth(i));
-    classtable->varscopes.addid(formal->name, new CgenVarSlot(i-formal_num, false));
+    classtable->varscopes.addid(formal->name, new CgenVarSlot(formal_num + 1 - i, false));
   }
   classtable->varscopes.enterscope();
   if (dynamic_cast<no_expr_class*>(method->expr) == NULL) {
