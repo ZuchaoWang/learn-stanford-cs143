@@ -31,6 +31,8 @@ private:
    int intclasstag;
    int boolclasstag;
 
+   int custom_label_counter;
+
 
 // The following methods emit code for
 // constants and global declarations.
@@ -65,7 +67,7 @@ public:
    CgenNodeP root();
 
    SymbolTable<Symbol,CgenVarSlot> varscopes;
-   int custom_label_counter;
+   int get_custom_label_count() { return custom_label_counter++; }
 };
 
 class CgenNodeAttrSlot {
