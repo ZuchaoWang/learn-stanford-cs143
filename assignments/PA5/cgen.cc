@@ -300,20 +300,6 @@ static void emit_blt(char *src1, char *src2, int label, ostream &s)
   s << endl;
 }
 
-static void emit_blti(char *src1, int imm, int label, ostream &s)
-{
-  s << BLT << src1 << " " << imm << " ";
-  emit_label_ref(label,s);
-  s << endl;
-}
-
-static void emit_bgti(char *src1, int imm, int label, ostream &s)
-{
-  s << BGT << src1 << " " << imm << " ";
-  emit_label_ref(label,s);
-  s << endl;
-}
-
 static void emit_branch(int l, ostream& s)
 {
   s << BRANCH;
@@ -1277,6 +1263,57 @@ void loop_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
 void typcase_class::code(ostream &s, CgenClassTable* classtable) {
+  int count_void = classtable->get_custom_label_count();
+  int count_loop = classtable->get_custom_label_count();
+  int count_notfound = classtable->get_custom_label_count();
+  int* count_branch = new int[cases->len()];
+  for (int i=cases->first(); cases->more(i); i=cases->next(i)) {
+    count_branch[i] = classtable->get_custom_label_count();
+  }
+  int count_end = classtable->get_custom_label_count();
+
+  expr->code(s, classtable);
+  emit_beqz(ACC, count_void, s);
+  emit_load(T1, TAG_OFFSET, ACC, s); // $t1 = case_classtag
+  // loop of case type chain
+  emit_label_ref(count_loop, s);
+  emit_blt(T1, ZERO, count_notfound, s);
+  // loop of branch type matching
+  for (int i=cases->first(); cases->more(i); i=cases->next(i)) {
+    branch_class* branch = dynamic_cast<branch_class*>(cases->nth(i));
+    int branch_classtag = classtable->probe(branch->type_decl)->get_classtag();
+    emit_load_imm(T2, branch_classtag, s); // $t2 = branch_classtag
+    emit_beq(T1, T2, count_branch[i], s);
+  }
+  // next case type in the chain
+  emit_load_address(T3, CLASSPARENTTAB, s); // $t3 = class_parentTab
+  emit_add(T3, T3, T1, s);
+  emit_load(T1, 0, T3, s); // $t1 = parent(case_classtag)
+  emit_branch(count_loop, s);
+  // handling void
+  emit_label_ref(count_void, s);
+  s << LA << ACC << " "; static_cast<StringEntry*>(filename)->code_ref(s); s << endl;
+  emit_load_imm(T1, 0, s);
+  emit_jal("_case_abort2", s);
+  // handling notfound
+  emit_label_ref(count_notfound, s);
+  emit_jal("_case_abort2", s);
+  // handling each found branch
+  for (int i=cases->first(); cases->more(i); i=cases->next(i)) {
+    branch_class* branch = dynamic_cast<branch_class*>(cases->nth(i));
+    emit_label_ref(count_branch[i], s);
+    classtable->varscopes.enterscope();
+    classtable->varscopes.addid(branch->name, new CgenVarSlot(-2-local_var_start , false));
+    emit_store(ACC, -2-local_var_start, FP, s);
+    classtable->varscopes.enterscope();
+    branch->expr->code(s, classtable);
+    classtable->varscopes.exitscope();
+    classtable->varscopes.exitscope();
+    emit_branch(count_end, s);
+  }
+  // the end
+  emit_label_ref(count_end, s);
+  delete[] count_branch;
 }
 
 void block_class::code(ostream &s, CgenClassTable* classtable) {
