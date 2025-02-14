@@ -1276,7 +1276,7 @@ void typcase_class::code(ostream &s, CgenClassTable* classtable) {
   emit_beqz(ACC, count_void, s);
   emit_load(T1, TAG_OFFSET, ACC, s); // $t1 = case_classtag
   // loop of case type chain
-  emit_label_ref(count_loop, s);
+  emit_label_def(count_loop, s);
   emit_blt(T1, ZERO, count_notfound, s);
   // loop of branch type matching
   for (int i=cases->first(); cases->more(i); i=cases->next(i)) {
@@ -1291,17 +1291,17 @@ void typcase_class::code(ostream &s, CgenClassTable* classtable) {
   emit_load(T1, 0, T3, s); // $t1 = parent(case_classtag)
   emit_branch(count_loop, s);
   // handling void
-  emit_label_ref(count_void, s);
+  emit_label_def(count_void, s);
   s << LA << ACC << " "; static_cast<StringEntry*>(filename)->code_ref(s); s << endl;
   emit_load_imm(T1, 0, s);
   emit_jal("_case_abort2", s);
   // handling notfound
-  emit_label_ref(count_notfound, s);
+  emit_label_def(count_notfound, s);
   emit_jal("_case_abort2", s);
   // handling each found branch
   for (int i=cases->first(); cases->more(i); i=cases->next(i)) {
     branch_class* branch = dynamic_cast<branch_class*>(cases->nth(i));
-    emit_label_ref(count_branch[i], s);
+    emit_label_def(count_branch[i], s);
     classtable->varscopes.enterscope();
     classtable->varscopes.addid(branch->name, new CgenVarSlot(-2-local_var_start , false));
     emit_store(ACC, -2-local_var_start, FP, s);
@@ -1312,7 +1312,7 @@ void typcase_class::code(ostream &s, CgenClassTable* classtable) {
     emit_branch(count_end, s);
   }
   // the end
-  emit_label_ref(count_end, s);
+  emit_label_def(count_end, s);
   delete[] count_branch;
 }
 

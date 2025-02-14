@@ -34,6 +34,7 @@ class Main {
             esac;
         } in
       io.out_string(y);
+      io.out_string("\n");
 
       (* simple return *)
       0;
