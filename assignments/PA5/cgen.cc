@@ -1105,6 +1105,10 @@ void CgenNode::code_method_def(method_class* method, ostream &s) {
     return;
   }
 
+  if (cgen_debug) {
+    cout << "coding method "; code_method_ref(method->name, cout); cout << "\n";
+  }
+
   code_method_ref(method->name, s); s << LABEL;
 
   // entry
@@ -1154,7 +1158,7 @@ void CgenNode::code_method_ref(Symbol method_name, ostream &s) {
       return;
     }
   }
-  cerr << "Method " << method_name->get_string() << " not found in class " << name->get_string() << endl;
+  cerr << "Error: method " << method_name->get_string() << " not found in class " << name->get_string() << endl;
   exit(1);
 }
 
