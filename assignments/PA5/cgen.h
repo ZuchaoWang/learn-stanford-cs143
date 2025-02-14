@@ -32,7 +32,7 @@ private:
    int boolclasstag;
 
    int custom_label_counter;
-
+   CgenNodeP current_nd;
 
 // The following methods emit code for
 // constants and global declarations.
@@ -57,8 +57,10 @@ private:
    void calculate_feature_slots();
    void count_local_vars();
    void code_prototypes();
-   void code_classname_table();
-   void code_classparent_table();
+   void code_class_name_table();
+   void code_class_parent_table();
+   void code_class_prototype_table();
+   void code_class_init_table();
    void code_dispatch_tables();
    void code_initializers();
    void code_methods();
@@ -69,6 +71,9 @@ public:
 
    SymbolTable<Symbol,CgenVarSlot> varscopes;
    int get_custom_label_count() { return custom_label_counter++; }
+
+   void set_current_nd(CgenNodeP nd) { current_nd = nd; }
+   CgenNodeP get_current_nd() { return current_nd; }
 };
 
 class CgenNodeAttrSlot {
@@ -132,6 +137,7 @@ public:
    void code_methods_def(ostream &s);
    void code_method_def(method_class* method, ostream &s);
    void code_method_ref(Symbol method_name, ostream &s);
+   int code_method_offset(Symbol method_name);
    void code_new(ostream&);
 };
 

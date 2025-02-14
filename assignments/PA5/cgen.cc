@@ -604,7 +604,8 @@ void CgenClassTable::code_constants()
 }
 
 
-CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s), custom_label_counter(0)
+CgenClassTable::CgenClassTable(Classes classes, ostream& s)
+  : nds(NULL) , str(s), custom_label_counter(0), current_nd(NULL)
 {
    enterscope();
    if (cgen_debug) cout << "Building CgenClassTable" << endl;
@@ -875,7 +876,7 @@ void CgenClassTable::code_prototypes() {
       l->hd()->code_prototype_def(str);
 }
 
-void CgenClassTable::code_classname_table() {
+void CgenClassTable::code_class_name_table() {
   str << CLASSNAMETAB << LABEL;
   int class_count = list_length(nds);
   CgenNode** nodes = new CgenNode*[class_count];
@@ -888,7 +889,7 @@ void CgenClassTable::code_classname_table() {
   delete[] nodes;
 }
 
-void CgenClassTable::code_classparent_table() {
+void CgenClassTable::code_class_parent_table() {
   str << CLASSPARENTTAB << LABEL;
   int class_count = list_length(nds);
   CgenNode** nodes = new CgenNode*[class_count];
@@ -897,6 +898,32 @@ void CgenClassTable::code_classparent_table() {
   for(int i = 0; i < class_count; i++) {
     CgenNode* cgen_node = nodes[i];
     str << WORD << cgen_node->get_parentnd()->get_classtag() <<endl;
+  }
+  delete[] nodes;
+}
+
+void CgenClassTable::code_class_prototype_table() {
+  str << CLASSPROTOBJTAB << LABEL;
+  int class_count = list_length(nds);
+  CgenNode** nodes = new CgenNode*[class_count];
+  for(List<CgenNode> *l = nds; l; l = l->tl())
+    nodes[l->hd()->get_classtag()] = l->hd();
+  for(int i = 0; i < class_count; i++) {
+    CgenNode* cgen_node = nodes[i];
+    str << WORD; cgen_node->code_prototype_ref(str); str<<endl;
+  }
+  delete[] nodes;
+}
+
+void CgenClassTable::code_class_init_table() {
+  str << CLASSINITTAB << LABEL;
+  int class_count = list_length(nds);
+  CgenNode** nodes = new CgenNode*[class_count];
+  for(List<CgenNode> *l = nds; l; l = l->tl())
+    nodes[l->hd()->get_classtag()] = l->hd();
+  for(int i = 0; i < class_count; i++) {
+    CgenNode* cgen_node = nodes[i];
+    str << WORD; cgen_node->code_init_ref(str); str<<endl;
   }
   delete[] nodes;
 }
@@ -932,11 +959,17 @@ void CgenClassTable::code()
   if (cgen_debug) cout << "coding prototypes" << endl;
   code_prototypes();
 
-  if (cgen_debug) cout << "coding class names" << endl;
-  code_classname_table();
+  if (cgen_debug) cout << "coding class name table" << endl;
+  code_class_name_table();
 
-  if (cgen_debug) cout << "coding class parents" << endl;
-  code_classparent_table();
+  if (cgen_debug) cout << "coding class parent table" << endl;
+  code_class_parent_table();
+
+  if (cgen_debug) cout << "coding class prototype table" << endl;
+  code_class_prototype_table();
+
+  if (cgen_debug) cout << "coding class initializer table" << endl;
+  code_class_init_table();
 
   if (cgen_debug) cout << "coding dispatch tables" << endl;
   code_dispatch_tables();
@@ -1003,6 +1036,7 @@ void CgenNode::code_init_def(ostream &s) {
 
   // call attr initializer defined in current class
   emit_load(ACC, -1, FP, s);
+  classtable->set_current_nd(this);
   classtable->varscopes.enterscope();
   for (List<CgenNodeAttrSlot>* l=attr_slots; l; l=l->tl()) {
     classtable->varscopes.addid(l->hd()->attr->name, new CgenVarSlot(l->hd()->offset + DEFAULT_OBJFIELDS, true));
@@ -1028,6 +1062,7 @@ void CgenNode::code_init_def(ostream &s) {
   }
   classtable->varscopes.exitscope();
   classtable->varscopes.exitscope();
+  classtable->set_current_nd(NULL);
   
   // exit
   emit_load(ACC, -1, FP, s);
@@ -1038,7 +1073,7 @@ void CgenNode::code_init_def(ostream &s) {
 }
 
 void CgenNode::code_init_ref(ostream &s) {
-  s << name->get_string() << CLASSINIT_SUFFIX;
+  emit_init_ref(name, s);
 }
 
 void CgenNode::code_dispatch_table_def(ostream &s) {
@@ -1057,7 +1092,7 @@ void CgenNode::code_dispatch_table_def(ostream &s) {
 }
 
 void CgenNode::code_dispatch_table_ref(ostream &s) {
-  s << name->get_string() << DISPTAB_SUFFIX;
+  emit_disptable_ref(name, s);
 }
 
 void CgenNode::code_prototype_def(ostream &s) {
@@ -1087,7 +1122,7 @@ void CgenNode::code_prototype_def(ostream &s) {
 }
 
 void CgenNode::code_prototype_ref(ostream &s) {
-  s << name->get_string() << PROTOBJ_SUFFIX;
+  emit_protobj_ref(name, s);
 }
 
 void CgenNode::code_methods_def(ostream &s) {
@@ -1119,6 +1154,7 @@ void CgenNode::code_method_def(method_class* method, ostream &s) {
   emit_addi(SP, SP, -12, s);
 
   // body
+  classtable->set_current_nd(this);
   classtable->varscopes.enterscope();
   for (List<CgenNodeAttrSlot>* l=attr_slots; l; l=l->tl()) {
     classtable->varscopes.addid(l->hd()->attr->name, new CgenVarSlot(l->hd()->offset + DEFAULT_OBJFIELDS, true));
@@ -1143,6 +1179,7 @@ void CgenNode::code_method_def(method_class* method, ostream &s) {
   classtable->varscopes.exitscope();
   classtable->varscopes.exitscope();
   classtable->varscopes.exitscope();
+  classtable->set_current_nd(NULL);
   
   // exit
   emit_load(RA, 0, FP, s);
@@ -1154,8 +1191,18 @@ void CgenNode::code_method_def(method_class* method, ostream &s) {
 void CgenNode::code_method_ref(Symbol method_name, ostream &s) {
   for (List<CgenNodeMethodSlot> *l=method_slots; l; l=l->tl()) {
     if (l->hd()->method->name == method_name) {
-      s << l->hd()->source->name->get_string() << METHOD_SEP << method_name->get_string();
+      emit_method_ref(l->hd()->source->name, method_name, s);
       return;
+    }
+  }
+  cerr << "Error: method " << method_name->get_string() << " not found in class " << name->get_string() << endl;
+  exit(1);
+}
+
+int CgenNode::code_method_offset(Symbol method_name) {
+  for (List<CgenNodeMethodSlot> *l=method_slots; l; l=l->tl()) {
+    if (l->hd()->method->name == method_name) {
+      return l->hd()->offset;
     }
   }
   cerr << "Error: method " << method_name->get_string() << " not found in class " << name->get_string() << endl;
@@ -1164,7 +1211,7 @@ void CgenNode::code_method_ref(Symbol method_name, ostream &s) {
 
 void CgenNode::code_new(ostream &s) {
   s << LA << ACC << " "; code_prototype_ref(s); s << endl;
-  s << JAL; code_method_ref(copy_, s); s << endl;
+  s << JAL; classtable->probe(Object)->code_method_ref(copy_, s); s << endl;
   s << JAL; code_init_ref(s); s << endl;
 }
 
@@ -1220,14 +1267,17 @@ void dispatch_class::code(ostream &s, CgenClassTable* classtable) {
     emit_push(ACC, s);
   }
   expr->code(s, classtable);
-  CgenNodeP class_node = classtable->probe(expr->type);
+  Symbol expr_type = expr->type == SELF_TYPE ? classtable->get_current_nd()->name : expr->type;
+  CgenNodeP class_node = classtable->probe(expr_type);
   if (class_node == NULL) {
-    cerr << "dispatch_class " << expr->type->get_string() << " not found" << endl;
+    cerr << "dispatch_class " << expr_type->get_string() << " not found" << endl;
   }
   int count_void = classtable->get_custom_label_count();
   int count_end = classtable->get_custom_label_count();
   emit_beqz(ACC, count_void, s);
-  s << JAL; class_node->code_method_ref(name, s); s << endl;
+  emit_load(T1, DISPTABLE_OFFSET, ACC, s);
+  emit_load(T1, class_node->code_method_offset(name), T1, s);
+  emit_jalr(T1, s);
   emit_branch(count_end, s);
   emit_label_def(count_void, s);
   s << LA << ACC << " "; static_cast<StringEntry*>(filename)->code_ref(s); s << endl;
@@ -1489,11 +1539,24 @@ void bool_const_class::code(ostream& s, CgenClassTable* classtable)
 }
 
 void new__class::code(ostream &s, CgenClassTable* classtable) {
-  CgenNodeP cgen_node = classtable->probe(type_name);
-  if (cgen_node == NULL) {
-    cerr << "Error: " << type_name->get_string() << " not found in class table" << endl;
+  if (type_name == SELF_TYPE) {
+    emit_load(T1, -1, FP, s); // $t1 = self instance
+    emit_load(T1, TAG_OFFSET, T1, s); // $t1 = self classtag
+    emit_load_address(ACC, CLASSPROTOBJTAB, s);
+    emit_add(ACC, ACC, T1, s); // $a0 = protObj
+    emit_push(T1, s);
+    s << JAL; classtable->probe(Object)->code_method_ref(copy_, s); s << endl;
+    emit_pop(T1, s); // $t1 = self classtag
+    emit_load_address(T2, CLASSINITTAB, s);
+    emit_add(T2, T2, T1, s); // $t2 = init
+    emit_jalr(T2, s);
+  } else {
+    CgenNodeP cgen_node = classtable->probe(type_name);
+    if (cgen_node == NULL) {
+      cerr << "Error: " << type_name->get_string() << " not found in class table" << endl;
+    }
+    cgen_node->code_new(s);
   }
-  cgen_node->code_new(s);
 }
 
 void isvoid_class::code(ostream &s, CgenClassTable* classtable) {
