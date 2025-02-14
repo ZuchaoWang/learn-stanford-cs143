@@ -22,6 +22,19 @@ class Main {
         } pool;
       io.out_string("\n");
 
+      (* case *)
+      let y: String <-
+        {
+          let x: Int <- 0 in
+            case x of
+              xb: Bool => { io.out_string("x is bool\n"); "bool";};
+              xi: Int => { io.out_string("x is int\n"); "int";};
+              xs: String => { io.out_string("x is string\n"); "string";};
+              xo: Object => { io.out_string("x is object\n"); "object";};
+            esac;
+        } in
+      io.out_string(y);
+
       (* simple return *)
       0;
     }
