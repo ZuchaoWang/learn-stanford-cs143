@@ -1479,16 +1479,25 @@ void lt_class::code(ostream &s, CgenClassTable* classtable) {
 }
 
 void eq_class::code(ostream &s, CgenClassTable* classtable) {
-  // prepare
+  int count_pointer_ne = classtable->get_custom_label_count();
+  int count_end = classtable->get_custom_label_count();
+  // prepare operands
   e1->code(s, classtable);
   emit_push(ACC, s);
   e2->code(s, classtable);
   emit_pop(T1, s);
   emit_move(T2, ACC, s);
+  // check pointer eq
+  emit_bne(T1, T2, count_pointer_ne, s);
+  emit_load_bool(ACC, BoolConst(1), s);
+  emit_branch(count_end, s);
+  // check deep eq
+  emit_label_ref(count_pointer_ne, s);
   emit_load_bool(ACC, BoolConst(1), s);
   emit_load_bool(A1, BoolConst(0), s);
-  // call
   emit_jal("equality_test", s);
+  // the end
+  emit_label_ref(count_end, s);
 }
 
 void leq_class::code(ostream &s, CgenClassTable* classtable) {
