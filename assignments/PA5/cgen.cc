@@ -1129,6 +1129,8 @@ void CgenNode::code_dispatch_table_ref(ostream &s) {
 void CgenNode::code_prototype_def(ostream &s) {
   int slot_num = list_length(attr_slots);
 
+  s << WORD << "-1" << endl; // eye catcher
+
   code_prototype_ref(s);  s << LABEL                                  // label
   << WORD << classtag << endl                       // class tag
   << WORD << (DEFAULT_OBJFIELDS + slot_num) << endl   // object size
