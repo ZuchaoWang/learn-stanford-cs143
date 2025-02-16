@@ -354,7 +354,6 @@ static void emit_gc_check(char *source, ostream &s)
   s << JAL << "_gc_check" << endl;
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////
 //
 // coding strings, ints, and booleans
@@ -1412,7 +1411,19 @@ void block_class::code(ostream &s, CgenClassTable* classtable) {
 void let_class::code(ostream &s, CgenClassTable* classtable) {
   classtable->varscopes.enterscope();
   classtable->varscopes.addid(identifier, new CgenVarSlot(-2-local_var_start , false));
-  init->code(s, classtable);
+  if (dynamic_cast<no_expr_class*>(init) == NULL) {
+    init->code(s, classtable);
+  } else {
+    if (type_decl == Bool) {
+      s << LA << ACC << " "; falsebool.code_ref(s); s << endl;
+    } else if (type_decl == Int) {
+      s << LA << ACC << " "; inttable.add_string("0")->code_ref(s); s<<endl;
+    } else if (type_decl == Str) {
+      s << LA << ACC << " "; stringtable.add_string("")->code_ref(s); s<<endl;
+    } else {
+      emit_load_imm(ACC, 0, s);
+    }
+  }
   emit_store(ACC, -2-local_var_start, FP, s);
   classtable->varscopes.enterscope();
   body->code(s, classtable);
