@@ -128,6 +128,7 @@ public:
    void count_local_vars();
    void add_attr_slot(attr_class* attr, CgenNodeP source);
    void add_method_slot(method_class* method, CgenNodeP source);
+   void code_global_text(ostream &s);
    void code_init_def(ostream &s);
    void code_init_ref(ostream &s);
    void code_dispatch_table_def(ostream &s);

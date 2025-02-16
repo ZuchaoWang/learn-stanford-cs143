@@ -540,18 +540,22 @@ void CgenClassTable::code_global_text()
   str << GLOBAL << HEAP_START << endl
       << HEAP_START << LABEL 
       << WORD << 0 << endl
-      << "\t.text" << endl
-      << GLOBAL;
-  emit_init_ref(idtable.add_string("Main"), str);
-  str << endl << GLOBAL;
-  emit_init_ref(idtable.add_string("Int"),str);
-  str << endl << GLOBAL;
-  emit_init_ref(idtable.add_string("String"),str);
-  str << endl << GLOBAL;
-  emit_init_ref(idtable.add_string("Bool"),str);
-  str << endl << GLOBAL;
-  emit_method_ref(idtable.add_string("Main"), idtable.add_string("main"), str);
-  str << endl;
+      << "\t.text" << endl;
+  
+  // str << GLOBAL; emit_init_ref(idtable.add_string("Main"), str); str << endl;
+  str << GLOBAL; emit_init_ref(idtable.add_string("Int"),str); str << endl;
+  str << GLOBAL; emit_init_ref(idtable.add_string("String"),str); str << endl;
+  str << GLOBAL; emit_init_ref(idtable.add_string("Bool"),str); str << endl;
+  // str << GLOBAL; emit_method_ref(idtable.add_string("Main"), idtable.add_string("main"), str); str << endl;
+
+  // More global names to facilitate debugging
+  // this already includes Main.init and Main.main
+  for(List<CgenNode> *l = nds; l; l = l->tl()) {
+    CgenNodeP cgen_node = l->hd();
+    if (cgen_node->basic() == false) {
+      cgen_node->code_global_text(str);
+    }
+  }
 }
 
 void CgenClassTable::code_bools(int boolclasstag)
@@ -1013,11 +1017,43 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTableP ct) :
    classtable = ct;
 }
 
+void CgenNode::code_global_text(ostream &s) {
+  s << GLOBAL; code_init_ref(s); s << endl;
+  for (int i=features->first(); features->more(i); i=features->next(i)) {
+    if (dynamic_cast<method_class*>(features->nth(i)) != NULL) {
+      method_class* method = dynamic_cast<method_class*>(features->nth(i));
+      s << GLOBAL; code_method_ref(method->name, s); s << endl;
+    }
+  }
+}
+
 void CgenNode::code_init_def(ostream &s) {
   code_init_ref(s); s << LABEL;
 
   if (basic_status == Basic) {
     // noop for basic classes
+    emit_return(s);
+    return;
+  }
+
+  // call parent initializer
+  if (parentnd != NULL && parentnd->basic_status != Basic) {
+    emit_push(RA, s);
+    s << JAL; parentnd->code_init_ref(s); s << endl;
+    emit_pop(RA, s);
+  }
+
+  int attr_init_count = 0;
+  for (int i=features->first(); features->more(i); i=features->next(i)) {
+    if (dynamic_cast<attr_class*>(features->nth(i)) != NULL) {
+      attr_class* attr = dynamic_cast<attr_class*>(features->nth(i));
+      if (dynamic_cast<no_expr_class*>(attr->init) == NULL) {
+        attr_init_count++;
+      }
+    }
+  }
+  if (attr_init_count == 0) {
+    // noop for zero initializerss
     emit_return(s);
     return;
   }
@@ -1028,11 +1064,6 @@ void CgenNode::code_init_def(ostream &s) {
   emit_store(ACC, -2, SP, s);
   emit_addi(FP, SP, -4, s);
   emit_addi(SP, SP, -12, s);
-
-  // call parent initializer
-  if (parentnd != NULL && parentnd->basic_status != Basic) {
-    s << JAL; parentnd->code_init_ref(s); s << endl;
-  }
 
   // call attr initializer defined in current class
   emit_load(ACC, -1, FP, s);
