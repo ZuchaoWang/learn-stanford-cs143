@@ -225,25 +225,6 @@ class Main inherits IO {
          );
       }
    };
-
-   is_even(num : Int) : Bool {
-      (let x : Int <- num in
-            if x < 0 then is_even(~x) else
-            if 0 = x then true else
-	    if 1 = x then false else
-	          is_even(x - 2)
-	    fi fi fi
-      )
-   };
-
-   class_type(var : A) : SELF_TYPE {
-      case var of
-	 a : A => out_string("Class type is now A\n");
-	 b : B => out_string("Class type is now B\n");
-	 c : C => out_string("Class type is now C\n");
-	 o : Object => out_string("Oooops\n");
-      esac
-   };
  
    print(var : A) : SELF_TYPE {
      (let z : A2I <- new A2I in
@@ -262,13 +243,7 @@ class Main inherits IO {
             -- avar <- (new A).set_var(get_int());
             out_string("number ");
             print(avar);
-            if is_even(avar.value()) then
-                out_string("is even!\n")
-            else
-                out_string("is odd!\n")
-            fi;
             -- print(avar); -- prints out answer
-            class_type(avar);
             char <- menu();
             if char = "a" then -- add
             {
