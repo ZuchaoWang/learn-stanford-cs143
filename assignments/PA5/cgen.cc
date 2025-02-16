@@ -1373,7 +1373,8 @@ void typcase_class::code(ostream &s, CgenClassTable* classtable) {
   }
   // next case type in the chain
   emit_load_address(T3, CLASSPARENTTAB, s); // $t3 = class_parentTab
-  emit_add(T3, T3, T1, s);
+  emit_sll(T4, T1, 2, s); // $t4 = class table offset in bytes
+  emit_add(T3, T3, T4, s);
   emit_load(T1, 0, T3, s); // $t1 = parent(case_classtag)
   emit_branch(count_loop, s);
   // handling void
@@ -1595,11 +1596,12 @@ void new__class::code(ostream &s, CgenClassTable* classtable) {
   if (type_name == SELF_TYPE) {
     emit_load(T1, -1, FP, s); // $t1 = self instance
     emit_load(T1, TAG_OFFSET, T1, s); // $t1 = self classtag
+    emit_sll(T1, T1, 2, s); // $t1 = class table offset in bytes
     emit_load_address(ACC, CLASSPROTOBJTAB, s);
     emit_add(ACC, ACC, T1, s); // $a0 = protObj
     emit_push(T1, s);
     s << JAL; classtable->probe(Object)->code_method_ref(copy_, s); s << endl;
-    emit_pop(T1, s); // $t1 = self classtag
+    emit_pop(T1, s); // $t1 = class table offset  in bytes
     emit_load_address(T2, CLASSINITTAB, s);
     emit_add(T2, T2, T1, s); // $t2 = init
     emit_jalr(T2, s);
