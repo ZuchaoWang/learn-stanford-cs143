@@ -1062,8 +1062,8 @@ void CgenNode::code_init_def(ostream &s) {
   emit_store(FP, 0, SP, s);
   emit_store(RA, -1, SP, s);
   emit_store(ACC, -2, SP, s);
-  emit_addi(FP, SP, -4, s);
-  emit_addi(SP, SP, -12, s);
+  emit_addi(FP, SP, -WORD_SIZE, s);
+  emit_addi(SP, SP, -3*WORD_SIZE, s);
 
   // call attr initializer defined in current class
   emit_load(ACC, -1, FP, s);
@@ -1079,11 +1079,11 @@ void CgenNode::code_init_def(ostream &s) {
       attr_class* attr = dynamic_cast<attr_class*>(features->nth(i));
       if (dynamic_cast<no_expr_class*>(attr->init) == NULL) {
         if (attr->local_var_count) {
-          emit_addi(SP, SP, -4*attr->local_var_count, s);
+          emit_addi(SP, SP, -attr->local_var_count*WORD_SIZE, s);
         }
         attr->init->code(s, classtable);
         if (attr->local_var_count) {
-          emit_addi(SP, SP, 4*attr->local_var_count, s);
+          emit_addi(SP, SP, attr->local_var_count*WORD_SIZE, s);
         }
         emit_move(T1, ACC, s);
         emit_load(ACC, -1, FP, s);
@@ -1099,7 +1099,7 @@ void CgenNode::code_init_def(ostream &s) {
   emit_load(ACC, -1, FP, s);
   emit_load(RA, 0, FP, s);
   emit_load(FP, 1, FP, s);
-  emit_addi(SP, SP, 12, s);
+  emit_addi(SP, SP, 3*WORD_SIZE, s);
   emit_return(s);
 }
 
@@ -1181,8 +1181,8 @@ void CgenNode::code_method_def(method_class* method, ostream &s) {
   emit_store(FP, 0, SP, s);
   emit_store(RA, -1, SP, s);
   emit_store(ACC, -2, SP, s);
-  emit_addi(FP, SP, -4, s);
-  emit_addi(SP, SP, -12, s);
+  emit_addi(FP, SP, -WORD_SIZE, s);
+  emit_addi(SP, SP, -3*WORD_SIZE, s);
 
   // body
   classtable->set_current_nd(this);
@@ -1200,11 +1200,11 @@ void CgenNode::code_method_def(method_class* method, ostream &s) {
   classtable->varscopes.enterscope();
   if (dynamic_cast<no_expr_class*>(method->expr) == NULL) {
     if (method->local_var_count) {
-      emit_addi(SP, SP, -4*method->local_var_count, s);
+      emit_addi(SP, SP, -method->local_var_count*WORD_SIZE, s);
     }
     method->expr->code(s, classtable);
     if (method->local_var_count) {
-      emit_addi(SP, SP, 4*method->local_var_count, s);
+      emit_addi(SP, SP, method->local_var_count*WORD_SIZE, s);
     }
   }
   classtable->varscopes.exitscope();
@@ -1215,7 +1215,7 @@ void CgenNode::code_method_def(method_class* method, ostream &s) {
   // exit
   emit_load(RA, 0, FP, s);
   emit_load(FP, 1, FP, s);
-  emit_addi(SP, SP, 12, s);
+  emit_addi(SP, SP, (3 + formal_num) * WORD_SIZE, s);
   emit_return(s);
 }
 

@@ -5,6 +5,11 @@
 
 class Main {
   io: IO <- new IO;
+
+  add(x: Int, y: Int): Int { 
+    x + y
+  }; 
+
   main():Int { 
     {
       (* hello world *)
@@ -48,6 +53,12 @@ class Main {
         then io.out_string("eq: self = self\n")
         else io.out_string("eq: self != self\n")
       fi;
+
+      (* func *)
+      io.out_string("func: 1+2 = ");
+      let z: Int <- add(1, 2) in
+        io.out_int(z);
+      io.out_string("\n");
 
       (* simple return *)
       0;
