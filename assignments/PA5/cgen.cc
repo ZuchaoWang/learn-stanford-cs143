@@ -1492,12 +1492,12 @@ void eq_class::code(ostream &s, CgenClassTable* classtable) {
   emit_load_bool(ACC, BoolConst(1), s);
   emit_branch(count_end, s);
   // check deep eq
-  emit_label_ref(count_pointer_ne, s);
+  emit_label_def(count_pointer_ne, s);
   emit_load_bool(ACC, BoolConst(1), s);
   emit_load_bool(A1, BoolConst(0), s);
   emit_jal("equality_test", s);
   // the end
-  emit_label_ref(count_end, s);
+  emit_label_def(count_end, s);
 }
 
 void leq_class::code(ostream &s, CgenClassTable* classtable) {
