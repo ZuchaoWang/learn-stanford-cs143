@@ -337,11 +337,6 @@ static void emit_fetch_int(char *dest, char *source, ostream& s)
 static void emit_store_int(char *source, char *dest, ostream& s)
 {
   emit_store(source, DEFAULT_OBJFIELDS, dest, s);
-  // gc assign
-  if (cgen_Memmgr == GC_GENGC) {
-    emit_addi(A1, dest, DEFAULT_OBJFIELDS*WORD_SIZE, s);
-    emit_gc_assign(s);
-  }
 }
 
 static void emit_test_collector(ostream &s)
@@ -1278,7 +1273,7 @@ void assign_class::code(ostream &s, CgenClassTable* classtable) {
   }
   if (slot->is_attr) {
     // modify attr
-    emit_load(T1, -1, FP, s);
+    emit_load(T1, -1, FP, s); // $t1 = self
     emit_store(ACC, slot->offset, T1, s);
     // gc assign
     if (cgen_Memmgr == GC_GENGC) {
@@ -1286,7 +1281,13 @@ void assign_class::code(ostream &s, CgenClassTable* classtable) {
       emit_gc_assign(s);
     }
   } else {
+    // modify param or local
     emit_store(ACC, slot->offset, FP, s);
+    // gc assign
+    if (cgen_Memmgr == GC_GENGC) {
+      emit_addi(A1, FP, slot->offset*WORD_SIZE, s);
+      emit_gc_assign(s);
+    }
   }
 }
 
@@ -1652,10 +1653,22 @@ void object_class::code(ostream &s, CgenClassTable* classtable) {
     cerr << "Error: " << name->get_string() << " not found in varscopes" << endl;
   }
   if (slot->is_attr) {
-    emit_load(ACC, -1, FP, s);
-    emit_load(ACC, slot->offset, ACC, s);
+    // read attr
+    emit_load(T1, -1, FP, s); // $t1 = self
+    emit_load(ACC, slot->offset, T1, s);
+    // gc assign
+    if (cgen_Memmgr == GC_GENGC) {
+      emit_addi(A1, T1, slot->offset*WORD_SIZE, s);
+      emit_gc_assign(s);
+    }
   } else {
+    // read param or local
     emit_load(ACC, slot->offset, FP, s);
+    // gc assign
+    if (cgen_Memmgr == GC_GENGC) {
+      emit_addi(A1, FP, slot->offset*WORD_SIZE, s);
+      emit_gc_assign(s);
+    }
   }
 }
 
