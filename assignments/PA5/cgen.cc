@@ -335,8 +335,14 @@ static void emit_fetch_int(char *dest, char *source, ostream& s)
 // into the Integer object pointed to by dest.
 //
 static void emit_store_int(char *source, char *dest, ostream& s)
-{ emit_store(source, DEFAULT_OBJFIELDS, dest, s); }
-
+{
+  emit_store(source, DEFAULT_OBJFIELDS, dest, s);
+  // gc assign
+  if (cgen_Memmgr == GC_GENGC) {
+    emit_addi(A1, dest, DEFAULT_OBJFIELDS*WORD_SIZE, s);
+    emit_gc_assign(s);
+  }
+}
 
 static void emit_test_collector(ostream &s)
 {
@@ -1086,7 +1092,14 @@ void CgenNode::code_init_def(ostream &s) {
         }
         emit_move(T1, ACC, s);
         emit_load(ACC, -1, FP, s);
-        emit_store(T1, classtable->varscopes.lookup(attr->name)->offset, ACC, s);
+        // modify attr
+        int attr_offset = classtable->varscopes.lookup(attr->name)->offset;
+        emit_store(T1, attr_offset, ACC, s);
+        // gc assign
+        if (cgen_Memmgr == GC_GENGC) {
+          emit_addi(A1, T1, attr_offset*WORD_SIZE, s);
+          emit_gc_assign(s);
+        }
       }
     }
   }
@@ -1264,8 +1277,14 @@ void assign_class::code(ostream &s, CgenClassTable* classtable) {
     cerr << "Error: " << name->get_string() << " not found in varscopes" << endl;
   }
   if (slot->is_attr) {
+    // modify attr
     emit_load(T1, -1, FP, s);
     emit_store(ACC, slot->offset, T1, s);
+    // gc assign
+    if (cgen_Memmgr == GC_GENGC) {
+      emit_addi(A1, T1, slot->offset*WORD_SIZE, s);
+      emit_gc_assign(s);
+    }
   } else {
     emit_store(ACC, slot->offset, FP, s);
   }
