@@ -1624,7 +1624,7 @@ void new__class::code(ostream &s, CgenClassTable* classtable) {
     s << JAL; classtable->probe(Object)->code_method_ref(copy_, s); s << endl;
     emit_pop(T1, s); // $t1 = class table offset  in bytes
     emit_load_address(T2, CLASSINITTAB, s);
-    emit_add(T2, T2, T1, s); // $a0 = class table entry for protObj
+    emit_add(T2, T2, T1, s); // $a0 = class table entry for init
     emit_load(T2, 0, T2, s);// $t2 = init
     emit_jalr(T2, s);
   } else {
