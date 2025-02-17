@@ -72,7 +72,7 @@ class Main {
       io.out_string("\n");
 
       (* new self *)
-      io.out_string("new SELF_TYPE/Main = ");
+      io.out_string("new SELF_TYPE of Main = ");
       let m: Object <- new SELF_TYPE in
         io.out_string(m.type_name());
       io.out_string("\n");
